@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Brain } from "lucide-react";
+import { Brain, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 // Assuming standard shadcn/ui components are available at these paths
@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [role, setRole] = useState("student");
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -140,15 +141,24 @@ export default function AuthPage() {
                     </button>
                   )}
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="bg-zinc-950 border-zinc-800 focus-visible:ring-violet-500 focus-visible:border-violet-500 text-zinc-100 placeholder:text-zinc-600 h-11 rounded-lg"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    className="bg-zinc-950 border-zinc-800 focus-visible:ring-violet-500 focus-visible:border-violet-500 text-zinc-100 placeholder:text-zinc-600 h-11 rounded-lg pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
 
