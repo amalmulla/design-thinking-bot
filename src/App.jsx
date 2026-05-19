@@ -5,7 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from '@/pages/LoginPage';
 import DashboardPage from '@/pages/DashboardPage';
 import WorkspacePage from '@/pages/WorkspacePage';
-import TeacherPage from '@/pages/TeacherPage';
+import TeacherDashboard from '@/pages/TeacherDashboard';
 
 export default function App() {
   return (
@@ -17,7 +17,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/workspace" element={<WorkspacePage />} />
-      <Route path="/teacher" element={<TeacherPage />} />
+      <Route path="/teacher" element={<TeacherDashboard />} />
       
       {/* Catch-all route for 404s (optional but recommended for scalability) */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
