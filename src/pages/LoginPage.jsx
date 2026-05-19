@@ -35,7 +35,7 @@ export default function AuthPage() {
 
     // Navigation logic
     if (role === "student") {
-      navigate("/workspace"); // Or "/dashboard" depending on your intended starting point
+      navigate("/dashboard"); // Or "/dashboard" depending on your intended starting point
     } else if (role === "teacher") {
       navigate("/teacher");
     }
@@ -44,7 +44,7 @@ export default function AuthPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-blue-800 p-4 font-sans text-zinc-900">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 p-4 font-sans text-zinc-100">
       <Card className="w-full max-w-sm bg-zinc-900 border-zinc-800 shadow-2xl shadow-black/80 rounded-2xl overflow-hidden">
         
         <CardHeader className="space-y-4 pt-8 pb-6 text-center flex flex-col items-center">
@@ -166,7 +166,7 @@ export default function AuthPage() {
 
         {/* Footer Toggle Link */}
         <CardFooter className="pb-8 justify-center border-t border-zinc-800/50 pt-6 mt-2">
-          <div className="text-sm text-zinc-800">
+          <div className="text-sm text-zinc-400">
             {isSignUp ? "Already have an account? " : "Don't have an account? "}
             <button
               type="button"
