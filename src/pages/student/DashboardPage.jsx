@@ -14,10 +14,10 @@ import {
 import { useNavigate } from "react-router-dom";
 
 // Assuming standard shadcn/ui components are available
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
+import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 
 // --- MOCK DATA ---
 

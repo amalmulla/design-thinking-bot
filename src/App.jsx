@@ -2,10 +2,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Assuming standard shadcn/ui Vite path aliases (@)
-import LoginPage from '@/pages/LoginPage';
-import DashboardPage from '@/pages/DashboardPage';
-import WorkspacePage from '@/pages/WorkspacePage';
-import TeacherDashboard from '@/pages/TeacherDashboard'; 
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/student/DashboardPage';
+import WorkspacePage from './pages/workspace/WorkspacePage';
+import TeacherDashboard from './pages/teacher/TeacherDashboard'; 
 
 export default function App() {
   return (

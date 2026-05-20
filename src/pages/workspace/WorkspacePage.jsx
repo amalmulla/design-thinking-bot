@@ -24,13 +24,13 @@ import {
 import { useNavigate } from "react-router-dom";
 
 // Assuming standard shadcn/ui components are available
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Badge } from "../../components/ui/badge";
+import { ScrollArea } from "../../components/ui/scroll-area";
+import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
+import { Avatar, AvatarFallback } from "../../components/ui/avatar";
+import { Separator } from "../../components/ui/separator";
 
 // --- MOCK DATA ---
 
@@ -246,7 +246,10 @@ export default function WorkspacePage() {
         {/* PANEL 1: LEFT SIDEBAR (Fixed w-64) */}
         <aside className="w-64 shrink-0 border-r border-zinc-800 bg-zinc-950 flex flex-col">
           <div className="p-4 space-y-5 flex-1 overflow-y-auto">
-            <Button className="w-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200 shadow-sm font-semibold">
+            <Button 
+              className="w-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200 shadow-sm font-semibold"
+              onClick={() => navigate('/workspace/new')}
+            >
               <Plus className="h-4 w-4 mr-2" />
               New Project
             </Button>
@@ -262,7 +265,11 @@ export default function WorkspacePage() {
             <div className="space-y-1 pt-2">
               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 px-1">Recent Sessions</h3>
               {RECENT_SESSIONS.map((session) => (
-                <div key={session.id} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-zinc-900 cursor-pointer group transition-colors">
+                <div 
+                  key={session.id} 
+                  className="flex items-center justify-between p-2.5 rounded-lg hover:bg-zinc-900 cursor-pointer group transition-colors"
+                  onClick={() => navigate(`/workspace/${session.id}`)}
+                >
                   <span className="text-sm font-medium text-zinc-300 truncate pr-2">{session.title}</span>
                   {session.pinned && <Star className="h-3.5 w-3.5 text-yellow-500/70 fill-yellow-500/20 shrink-0" />}
                 </div>

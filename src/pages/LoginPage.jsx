@@ -3,11 +3,11 @@ import { Brain, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 // Assuming standard shadcn/ui components are available at these paths
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardHeader, CardContent, CardFooter } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Button } from "../components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
