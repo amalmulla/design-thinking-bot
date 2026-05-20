@@ -150,7 +150,10 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="mt-auto">
-                    <Button className="bg-zinc-100 text-zinc-900 hover:bg-white font-semibold px-6 shadow-sm">
+                    <Button 
+                      onClick={() => navigate(`/workspace/${recentProject.id}`)}
+                      className="bg-zinc-100 text-zinc-900 hover:bg-white hover:opacity-90 transition-opacity font-semibold px-6 shadow-sm"
+                    >
                       Continue Working
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
@@ -164,10 +167,14 @@ export default function DashboardPage() {
         {/* MIDDLE SECTION: Action Header */}
         <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
           <h2 className="text-xl font-semibold text-zinc-100">My Portfolio</h2>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm font-medium">
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Project
-          </Button>
+            <Button 
+              onClick={() => navigate('/workspace/new')}
+              size="sm" 
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm font-medium transition-colors"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              New Project
+            </Button>
         </div>
 
         {/* BOTTOM SECTION: The Project Grid */}
@@ -179,6 +186,7 @@ export default function DashboardPage() {
             return (
               <Card 
                 key={project.id} 
+                onClick={() => navigate(`/workspace/${project.id}`)}
                 className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 hover:border-zinc-700 transition-all duration-200 cursor-pointer group flex flex-col shadow-sm hover:shadow-md"
               >
                 <CardHeader className="pb-4 border-b border-zinc-800/50 bg-zinc-950/30">
@@ -225,7 +233,10 @@ export default function DashboardPage() {
           })}
 
           {/* Empty State / Add New Placeholder in Grid */}
-          <Card className="bg-transparent border-2 border-dashed border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/30 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[220px]">
+          <Card 
+            onClick={() => navigate('/workspace/new')}
+            className="bg-transparent border-2 border-dashed border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/30 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[220px] group"
+          >
              <div className="h-12 w-12 rounded-full bg-zinc-900 flex items-center justify-center mb-3">
                <Plus className="h-6 w-6 text-zinc-500" />
              </div>
