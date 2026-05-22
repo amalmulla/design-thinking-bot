@@ -8,8 +8,7 @@ import {
   Layers, 
   FlaskConical, 
   Users,
-  Brain,
-  LogOut
+  Brain
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -17,7 +16,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
-import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import Header from "../../components/ui/Header";
 
 // --- MOCK DATA ---
@@ -76,22 +74,7 @@ export default function DashboardPage({ theme, toggleTheme }) {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans selection:bg-blue-500/30 transition-colors duration-200">
       
       {/* GLOBAL HEADER */}
-      <Header theme={theme} toggleTheme={toggleTheme} brainColor="text-pink-500 dark:text-pink-400">
-        <Badge variant="secondary" className="bg-zinc-200/60 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-300 border-zinc-300 dark:border-zinc-800">
-          Student
-        </Badge>
-        <Avatar className="h-8 w-8 border border-zinc-200 dark:border-zinc-800">
-          <AvatarFallback className="bg-zinc-200 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-300">ST</AvatarFallback>
-        </Avatar>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hidden sm:flex" 
-          onClick={() => navigate('/login')}
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
-      </Header>
+      <Header theme={theme} toggleTheme={toggleTheme} brainColor="text-pink-500 dark:text-pink-400" />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
         

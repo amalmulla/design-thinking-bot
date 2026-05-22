@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Brain,
-  LogOut,
   Plus,
   Search,
   Users,
@@ -29,9 +28,9 @@ import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
-import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import { Separator } from "../../components/ui/separator";
 import Header from "../../components/ui/Header";
+import { usersService } from "../../UsersManager/usersService";
 
 // --- MOCK DATA ---
 
@@ -216,24 +215,24 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       {/* GLOBAL HEADER */}
       <Header theme={theme} toggleTheme={toggleTheme} brainColor="text-pink-500 dark:text-pink-400">
         <div className="flex items-center gap-3 mr-auto">
-          <Button variant="ghost" size="sm" className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8"
-          onClick={() => navigate('/dashboard')}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8 cursor-pointer"
+            onClick={() => {
+              const activeUser = usersService.getCurrentUser();
+              if (activeUser && activeUser.role === "teacher") {
+                navigate("/teacher");
+              } else {
+                navigate("/dashboard");
+              }
+            }}
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            {usersService.getCurrentUser()?.role === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
           </Button>
           <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800" />
           <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200">Eco-Packaging Project</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800">
-            Student
-          </Badge>
-          <Button 
-            variant="ghost" size="icon" className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hidden sm:flex" 
-            onClick={() => navigate('/login')}
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
         </div>
       </Header>
 

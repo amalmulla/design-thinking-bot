@@ -6,7 +6,6 @@ import {
   Layers, 
   FlaskConical, 
   Brain, 
-  LogOut, 
   Activity, 
   CheckCircle2, 
   AlertCircle,
@@ -24,7 +23,6 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import Header from "../../components/ui/Header";
 import {
   Table,
@@ -117,22 +115,7 @@ export default function TeacherDashboard({ theme, toggleTheme }) {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans selection:bg-indigo-500/30 relative transition-colors duration-200">
       
       {/* GLOBAL HEADER */}
-      <Header theme={theme} toggleTheme={toggleTheme} brainColor="text-indigo-500 dark:text-indigo-400">
-        <Badge variant="secondary" className="bg-indigo-100 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20">
-          Instructor View
-        </Badge>
-        <Avatar className="h-8 w-8 border border-zinc-200 dark:border-zinc-800">
-          <AvatarFallback className="bg-zinc-200 dark:bg-zinc-800 text-xs text-zinc-650 dark:text-zinc-300">Prof</AvatarFallback>
-        </Avatar>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hidden sm:flex" 
-          onClick={() => navigate('/login')}
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
-      </Header>
+      <Header theme={theme} toggleTheme={toggleTheme} brainColor="text-indigo-500 dark:text-indigo-400" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
         
