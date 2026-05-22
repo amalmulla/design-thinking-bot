@@ -25,6 +25,7 @@ import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
+import Header from "../../components/ui/Header";
 import {
   Table,
   TableBody,
@@ -73,7 +74,7 @@ const STUDENT_PROJECTS = [
 
 // --- MAIN COMPONENT ---
 
-export default function TeacherDashboard() {
+export default function TeacherDashboard({ theme, toggleTheme }) {
   const navigate = useNavigate();
   
   // States
@@ -113,93 +114,86 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-indigo-500/30 relative">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans selection:bg-indigo-500/30 relative transition-colors duration-200">
       
       {/* GLOBAL HEADER */}
-      <header className="h-14 shrink-0 flex items-center justify-between px-6 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-indigo-400" />
-          <h1 className="text-sm font-bold tracking-wide text-zinc-100">Design Thinking Bot</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
-            Instructor View
-          </Badge>
-          <Avatar className="h-8 w-8 border border-zinc-800">
-            <AvatarFallback className="bg-zinc-800 text-xs text-zinc-300">Prof</AvatarFallback>
-          </Avatar>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-zinc-400 hover:text-zinc-100 hidden sm:flex" 
-            onClick={() => navigate('/login')}
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
+      <Header theme={theme} toggleTheme={toggleTheme} brainColor="text-indigo-500 dark:text-indigo-400">
+        <Badge variant="secondary" className="bg-indigo-100 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20">
+          Instructor View
+        </Badge>
+        <Avatar className="h-8 w-8 border border-zinc-200 dark:border-zinc-800">
+          <AvatarFallback className="bg-zinc-200 dark:bg-zinc-800 text-xs text-zinc-650 dark:text-zinc-300">Prof</AvatarFallback>
+        </Avatar>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hidden sm:flex" 
+          onClick={() => navigate('/login')}
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
+      </Header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
         
         {/* HEADER SECTION */}
         <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-bold tracking-tight text-white">Class Command Center</h2>
-          <p className="text-zinc-400">Overview of student progress and active design challenges.</p>
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Class Command Center</h2>
+          <p className="text-zinc-500 dark:text-zinc-400">Overview of student progress and active design challenges.</p>
         </div>
 
         {/* TOP SECTION: Class Overview Metrics */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* ... [Metrics Cards remain identical] ... */}
-          <Card className="bg-zinc-900 border-zinc-800 shadow-sm">
+          <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-5 px-6">
-              <CardTitle className="text-sm font-medium text-zinc-400">Total Projects</CardTitle>
-              <Activity className="h-4 w-4 text-blue-400" />
+              <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Projects</CardTitle>
+              <Activity className="h-4 w-4 text-blue-500 dark:text-blue-400" />
             </CardHeader>
             <CardContent className="px-6 pb-5">
-              <div className="text-3xl font-bold text-zinc-100">{CLASS_METRICS.totalProjects}</div>
+              <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">{CLASS_METRICS.totalProjects}</div>
             </CardContent>
           </Card>
-          <Card className="bg-zinc-900 border-zinc-800 shadow-sm">
+          <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-5 px-6">
-              <CardTitle className="text-sm font-medium text-zinc-400">Avg Completion</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Avg Completion</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
             </CardHeader>
             <CardContent className="px-6 pb-5">
-              <div className="text-3xl font-bold text-zinc-100">{CLASS_METRICS.avgCompletion}</div>
+              <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">{CLASS_METRICS.avgCompletion}</div>
             </CardContent>
           </Card>
-          <Card className="bg-zinc-900 border-zinc-800 shadow-sm relative overflow-hidden">
+          <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 w-2 h-full bg-rose-500/20" />
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-5 px-6">
-              <CardTitle className="text-sm font-medium text-zinc-400">Needs Review</CardTitle>
-              <AlertCircle className="h-4 w-4 text-rose-400" />
+              <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Needs Review</CardTitle>
+              <AlertCircle className="h-4 w-4 text-rose-500 dark:text-rose-400" />
             </CardHeader>
             <CardContent className="px-6 pb-5">
-              <div className="text-3xl font-bold text-rose-400">{CLASS_METRICS.needsReview}</div>
+              <div className="text-3xl font-bold text-rose-500 dark:text-rose-400">{CLASS_METRICS.needsReview}</div>
             </CardContent>
           </Card>
-          <Card className="bg-zinc-900 border-zinc-800 shadow-sm">
+          <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-5 px-6">
-              <CardTitle className="text-sm font-medium text-zinc-400">Active Students</CardTitle>
-              <UserCheck className="h-4 w-4 text-purple-400" />
+              <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Active Students</CardTitle>
+              <UserCheck className="h-4 w-4 text-purple-500 dark:text-purple-400" />
             </CardHeader>
             <CardContent className="px-6 pb-5">
-              <div className="text-3xl font-bold text-zinc-100">{CLASS_METRICS.activeStudents}</div>
+              <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">{CLASS_METRICS.activeStudents}</div>
             </CardContent>
           </Card>
         </section>
 
         {/* MIDDLE SECTION: Active Design Challenges */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-            <h3 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
-              <Target className="h-5 w-5 text-indigo-400" />
+          <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
+            <h3 className="text-xl font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+              <Target className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
               Active Design Challenges
             </h3>
             <Button 
               onClick={openModal} 
               size="sm" 
-              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-medium"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-medium transition-colors"
             >
               <Plus className="h-4 w-4 mr-1.5" />
               New Challenge
@@ -208,23 +202,23 @@ export default function TeacherDashboard() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {ACTIVE_CHALLENGES.map((challenge) => (
-              <Card key={challenge.id} className="bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-colors group">
+              <Card key={challenge.id} className="bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors group">
                 <CardContent className="p-5 flex flex-col gap-3">
                   <div className="flex justify-between items-start gap-2">
-                    <h4 className="font-semibold text-zinc-200 group-hover:text-indigo-400 transition-colors line-clamp-2">
+                    <h4 className="font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
                       {challenge.title}
                     </h4>
-                    <Badge variant="outline" className={`text-[10px] uppercase shrink-0 ${challenge.status === 'Active' ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10' : 'text-orange-400 border-orange-500/20 bg-orange-500/10'}`}>
+                    <Badge variant="outline" className={`text-[10px] uppercase shrink-0 ${challenge.status === 'Active' ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/10' : 'text-orange-500 border-orange-500/20 bg-orange-500/10'}`}>
                       {challenge.status}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-auto pt-2">
-                    <span className="text-zinc-500 flex items-center gap-1.5">
+                    <span className="text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
                       <Users className="h-4 w-4" /> {challenge.teamCount} Teams
                     </span>
                     <button 
                       onClick={openModal}
-                      className="text-indigo-400 hover:text-indigo-300 text-xs font-medium flex items-center"
+                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-xs font-medium flex items-center"
                     >
                       Manage <ChevronRight className="h-3 w-3 ml-0.5" />
                     </button>
@@ -237,34 +231,34 @@ export default function TeacherDashboard() {
 
         {/* BOTTOM SECTION: The Master Data Table */}
         <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-3 gap-4">
-            <h3 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
-              <Layers className="h-5 w-5 text-indigo-400" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3 gap-4">
+            <h3 className="text-xl font-semibold text-zinc-850 dark:text-zinc-100 flex items-center gap-2">
+              <Layers className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
               All Student Projects
             </h3>
             
             <div className="flex items-center gap-3">
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-400 dark:text-zinc-500" />
                 <Input 
                   placeholder="Search students or projects..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 bg-zinc-900 border-zinc-800 focus-visible:ring-indigo-500 w-[250px] text-sm"
+                  className="pl-9 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 focus-visible:ring-indigo-500 w-[250px] text-sm text-zinc-900 dark:text-zinc-100"
                 />
               </div>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+                  <Button variant="outline" className="bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">
                     <Filter className="h-4 w-4 mr-2" />
                     {phaseFilter === 'All' ? 'All Phases' : PHASE_CONFIG[phaseFilter].label}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200">
-                  <DropdownMenuItem onClick={() => setPhaseFilter('All')} className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer">All Phases</DropdownMenuItem>
+                <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200">
+                  <DropdownMenuItem onClick={() => setPhaseFilter('All')} className="focus:bg-zinc-100 dark:focus:bg-zinc-800 focus:text-zinc-900 dark:focus:text-zinc-100 cursor-pointer">All Phases</DropdownMenuItem>
                   {Object.entries(PHASE_CONFIG).map(([key, config]) => (
-                    <DropdownMenuItem key={key} onClick={() => setPhaseFilter(key)} className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer flex items-center gap-2">
+                    <DropdownMenuItem key={key} onClick={() => setPhaseFilter(key)} className="focus:bg-zinc-100 dark:focus:bg-zinc-800 focus:text-zinc-900 dark:focus:text-zinc-100 cursor-pointer flex items-center gap-2">
                       <config.icon className={`h-3 w-3 ${config.color}`} /> {config.label}
                     </DropdownMenuItem>
                   ))}
@@ -273,17 +267,17 @@ export default function TeacherDashboard() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-zinc-800 overflow-hidden bg-zinc-900/50">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900/50 shadow-sm">
             <Table>
-              <TableHeader className="bg-zinc-900 border-b border-zinc-800">
+              <TableHeader className="bg-zinc-50/75 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="text-zinc-400 font-medium">Student / Team</TableHead>
-                  <TableHead className="text-zinc-400 font-medium w-[25%]">Project Title</TableHead>
-                  <TableHead className="text-zinc-400 font-medium">Phase</TableHead>
-                  <TableHead className="text-zinc-400 font-medium">AI Creativity</TableHead>
-                  <TableHead className="text-zinc-400 font-medium">Teamwork</TableHead>
-                  <TableHead className="text-zinc-400 font-medium">Last Active</TableHead>
-                  <TableHead className="text-zinc-400 font-medium text-right">Actions</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 font-medium">Student / Team</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 font-medium w-[25%]">Project Title</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 font-medium">Phase</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 font-medium">AI Creativity</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 font-medium">Teamwork</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 font-medium">Last Active</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 font-medium text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -299,11 +293,11 @@ export default function TeacherDashboard() {
                     const PhaseIcon = PhaseData.icon;
 
                     return (
-                      <TableRow key={project.id} className="border-zinc-800 hover:bg-zinc-800/30 transition-colors">
-                        <TableCell className="font-medium text-zinc-200">
+                      <TableRow key={project.id} className="border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30 transition-colors">
+                        <TableCell className="font-medium text-zinc-800 dark:text-zinc-200">
                           {project.studentOrTeamName}
                         </TableCell>
-                        <TableCell className="text-zinc-300 font-medium">
+                        <TableCell className="text-zinc-700 dark:text-zinc-350 font-medium">
                           {project.projectTitle}
                         </TableCell>
                         <TableCell>
@@ -311,7 +305,7 @@ export default function TeacherDashboard() {
                             <div className={`p-1.5 rounded-md ${PhaseData.bg}`}>
                               <PhaseIcon className={`h-3.5 w-3.5 ${PhaseData.color}`} />
                             </div>
-                            <span className="text-xs font-medium text-zinc-400">{PhaseData.label}</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{PhaseData.label}</span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -320,16 +314,15 @@ export default function TeacherDashboard() {
                         <TableCell>
                           {renderStatusBadge(project.teamworkStatus, 'teamwork')}
                         </TableCell>
-                        <TableCell className="text-xs text-zinc-500">
+                        <TableCell className="text-xs text-zinc-400 dark:text-zinc-500">
                           {project.lastActiveDate}
                         </TableCell>
                         <TableCell className="text-right">
-                          {/* REVIEW BUTTON ROUTING ADDED HERE */}
                           <Button 
                             onClick={() => navigate(`/teacher/review/${project.id}`)}
                             size="sm" 
                             variant="outline" 
-                            className="bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                            className="bg-transparent border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-350 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-950 dark:hover:text-white"
                           >
                             Review
                             <ChevronRight className="h-3 w-3 ml-1" />
@@ -347,14 +340,14 @@ export default function TeacherDashboard() {
 
       {/* OVERLAY MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
           {/* Modal Container */}
-          <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-zinc-800 bg-zinc-950/50 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-zinc-100 flex items-center gap-2">
-                <Target className="h-5 w-5 text-indigo-400" />
+            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-55/35 dark:bg-zinc-950/50 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                <Target className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
                 Manage Design Challenge
               </h3>
             </div>
@@ -362,16 +355,16 @@ export default function TeacherDashboard() {
             {/* Modal Body */}
             <div className="p-6 space-y-5">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-300">Challenge Title</label>
+                <label className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Challenge Title</label>
                 <Input 
                   defaultValue="Campus Food Waste Reduction" 
-                  className="bg-zinc-950 border-zinc-800 text-zinc-100 focus-visible:ring-indigo-500" 
+                  className="bg-zinc-50 dark:bg-zinc-950 border-zinc-300 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus-visible:ring-indigo-500" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-300">Brief & Objectives</label>
+                <label className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Brief & Objectives</label>
                 <textarea
-                  className="w-full h-32 bg-zinc-950 border border-zinc-800 rounded-md p-3 text-zinc-200 text-sm focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                  className="w-full h-32 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-md p-3 text-zinc-800 dark:text-zinc-250 text-sm focus:ring-1 focus:ring-indigo-500 dark:focus:ring-zinc-700 outline-none resize-none"
                   placeholder="Enter challenge description, constraints, and learning goals..."
                   defaultValue="Design an actionable solution to reduce post-consumer food waste in the main dining halls. Focus on student behavioral shifts and structural friction."
                 />
@@ -379,11 +372,11 @@ export default function TeacherDashboard() {
             </div>
             
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-950/50 flex justify-end gap-3">
+            <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-55/35 dark:bg-zinc-950/50 flex justify-end gap-3">
               <Button 
                 variant="ghost" 
                 onClick={closeModal} 
-                className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                className="text-zinc-550 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               >
                 Cancel
               </Button>
