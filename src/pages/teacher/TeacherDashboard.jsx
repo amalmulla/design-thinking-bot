@@ -42,6 +42,7 @@ import {
 // --- MOCK DATA ---
 import { CLASS_METRICS } from "../../lib/analytics";
 import { ACTIVE_CHALLENGES, STUDENT_PROJECTS } from "../../data/challenges";
+import { createDesignChallenge } from "../../lib/dataModels";
 
 const PHASE_CONFIG = {
   empathize: { label: "Empathize", icon: Users, color: "text-rose-400", bg: "bg-rose-400/10", border: "border-rose-400/20" },
@@ -56,22 +57,60 @@ const PHASE_CONFIG = {
 export default function TeacherDashboard({ theme, toggleTheme }) {
   const navigate = useNavigate();
   
-  // States
+  // Dynamic sessionStorage States
+  const [challenges, setChallenges] = useState(() => {
+    const stored = sessionStorage.getItem("challenges");
+    if (!stored) {
+      sessionStorage.setItem("challenges", JSON.stringify(ACTIVE_CHALLENGES));
+      return ACTIVE_CHALLENGES;
+    }
+    return JSON.parse(stored);
+  });
+
+  const [studentProjects, setStudentProjects] = useState(() => {
+    const stored = sessionStorage.getItem("studentProjects");
+    if (!stored) {
+      sessionStorage.setItem("studentProjects", JSON.stringify(STUDENT_PROJECTS));
+      return STUDENT_PROJECTS;
+    }
+    return JSON.parse(stored);
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false); // Modal State
 
-  // Filter Logic
-  const filteredProjects = STUDENT_PROJECTS.filter(p => {
-    const matchesSearch = p.studentOrTeamName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.projectTitle.toLowerCase().includes(searchTerm.toLowerCase());
+  // Modal Input States
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+
+  // Filter Logic utilizing dynamic studentProjects state
+  const filteredProjects = studentProjects.filter(p => {
+    const nameToMatch = p.studentOrTeamName || "";
+    const titleToMatch = p.projectTitle || p.title || "";
+    const matchesSearch = nameToMatch.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          titleToMatch.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = phaseFilter === "All" || p.currentPhase === phaseFilter;
     return matchesSearch && matchesFilter;
   });
 
   // Modal Handlers
   const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const closeModal = () => {
+    setNewTitle("");
+    setNewDesc("");
+    setIsModalOpen(false);
+  };
+
+  const handleSaveChallenge = () => {
+    if (!newTitle.trim()) return;
+    const newChallenge = createDesignChallenge(newTitle.trim(), newDesc.trim());
+    const updated = [...challenges, newChallenge];
+    sessionStorage.setItem("challenges", JSON.stringify(updated));
+    setChallenges(updated);
+    
+    closeModal();
+  };
 
   // Helper function for status badges
   const renderStatusBadge = (value, type) => {
@@ -165,7 +204,7 @@ export default function TeacherDashboard({ theme, toggleTheme }) {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {ACTIVE_CHALLENGES.map((challenge) => (
+            {challenges.map((challenge) => (
               <Card key={challenge.id} className="bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors group">
                 <CardContent className="p-5 flex flex-col gap-3">
                   <div className="flex justify-between items-start gap-2">
@@ -321,16 +360,19 @@ export default function TeacherDashboard({ theme, toggleTheme }) {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Challenge Title</label>
                 <Input 
-                  defaultValue="Campus Food Waste Reduction" 
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
                   className="bg-zinc-50 dark:bg-zinc-950 border-zinc-300 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus-visible:ring-indigo-500" 
+                  placeholder="e.g. Eco-Packaging Design"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Brief & Objectives</label>
                 <textarea
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
                   className="w-full h-32 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-md p-3 text-zinc-800 dark:text-zinc-250 text-sm focus:ring-1 focus:ring-indigo-500 dark:focus:ring-zinc-700 outline-none resize-none"
                   placeholder="Enter challenge description, constraints, and learning goals..."
-                  defaultValue="Design an actionable solution to reduce post-consumer food waste in the main dining halls. Focus on student behavioral shifts and structural friction."
                 />
               </div>
             </div>
@@ -345,7 +387,7 @@ export default function TeacherDashboard({ theme, toggleTheme }) {
                 Cancel
               </Button>
               <Button 
-                onClick={closeModal} 
+                onClick={handleSaveChallenge} 
                 className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
               >
                 Save Challenge

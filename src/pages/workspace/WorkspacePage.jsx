@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Search, Star, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 // Standard shadcn/ui style components
 import { Button } from "../../components/ui/button";
@@ -11,6 +11,8 @@ import { Separator } from "../../components/ui/separator";
 import Header from "../../components/ui/Header";
 import { usersService } from "../../UsersManager/usersService";
 import { getRandomPrompt } from "../../lib/socraticQuestions";
+import { createChatMessage } from "../../lib/dataModels";
+import { PROJECT_DATA } from "../../data/challenges";
 
 // Modular Workspace Components
 import PhaseStepper from "../../components/ProgressTracker/PhaseStepper";
@@ -21,37 +23,159 @@ import IdeationStickyNotes from "../../components/IdeationBoard/IdeationStickyNo
 import UploadPrototype from "../../components/PrototypeTools/UploadPrototype";
 import TestFeedbackGrid from "../../components/DesignCanvas/TestFeedbackGrid";
 
-// --- MOCK DATA ---
-
-const RECENT_SESSIONS = [
-  { id: 1, title: "Campus Food Waste", pinned: true },
-  { id: 2, title: "Library App Redesign", pinned: false },
-  { id: 3, title: "Student Onboarding", pinned: false },
-];
-
 // --- MAIN COMPONENT ---
 
 export default function WorkspacePage({ theme, toggleTheme }) {
-  const [currentPhase, setCurrentPhase] = useState("empathize");
-  const [messages, setMessages] = useState([]);
-  const [inputValue, setInputValue] = useState("");
+  const { projectId } = useParams();
   const navigate = useNavigate();
+
+  // Dynamic sessionStorage States
+  const [studentProjects, setStudentProjects] = useState(() => {
+    const stored = sessionStorage.getItem("studentProjects");
+    if (!stored) {
+      sessionStorage.setItem("studentProjects", JSON.stringify(PROJECT_DATA));
+      return PROJECT_DATA;
+    }
+    return JSON.parse(stored);
+  });
 
   // Simulated Read-Only state for Teacher Review
   const isReadOnly = window.location.pathname.includes('/teacher/review/');
 
+  // Find active project or fallback to first
+  const activeProject = studentProjects.find(
+    (p) => p.id.toString() === projectId?.toString()
+  ) || studentProjects[0] || null;
+
+  const [currentPhase, setCurrentPhase] = useState("empathize");
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState("");
+
+  // Sync state on project loading
+  useEffect(() => {
+    if (activeProject) {
+      setCurrentPhase(activeProject.currentPhase || "empathize");
+      setMessages(activeProject.messages || []);
+    }
+  }, [projectId, activeProject?.id]);
+
+  const saveProject = (updatedProj) => {
+    const updatedProjects = studentProjects.map((p) =>
+      p.id.toString() === updatedProj.id.toString() ? updatedProj : p
+    );
+    sessionStorage.setItem("studentProjects", JSON.stringify(updatedProjects));
+    setStudentProjects(updatedProjects);
+  };
+
+  const handlePhaseChange = (newPhase) => {
+    setCurrentPhase(newPhase);
+    if (activeProject && !isReadOnly) {
+      const phaseProgress = {
+        empathize: 20,
+        define: 40,
+        ideate: 60,
+        prototype: 80,
+        test: 100
+      };
+      const updated = {
+        ...activeProject,
+        currentPhase: newPhase,
+        progressPercentage: phaseProgress[newPhase] || activeProject.progressPercentage,
+        lastUpdated: "Just now"
+      };
+      saveProject(updated);
+    }
+  };
+
   const handleSendMessage = (text) => {
-    if (!text.trim()) return;
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    if (!text.trim() || !activeProject || isReadOnly) return;
+    
+    const userMsg = createChatMessage("user", text);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInputValue("");
+    
+    const updatedProjWithUser = {
+      ...activeProject,
+      messages: newMessages,
+      lastUpdated: "Just now"
+    };
+    saveProject(updatedProjWithUser);
     
     // Simulate Socratic AI response
     setTimeout(() => {
-      setMessages((prev) => [...prev, { 
-        role: "ai", 
-        content: getRandomPrompt(currentPhase) 
-      }]);
+      const aiMsg = createChatMessage("ai", getRandomPrompt(currentPhase));
+      const finalMessages = [...newMessages, aiMsg];
+      setMessages(finalMessages);
+      
+      const updatedProjWithAI = {
+        ...activeProject,
+        messages: finalMessages,
+        lastUpdated: "Just now"
+      };
+      saveProject(updatedProjWithAI);
     }, 1000);
+  };
+
+  // Safe canvas data resolution
+  const canvasData = activeProject?.canvasData || {};
+
+  // Empathize fields
+  const empathizeSays = canvasData.empathize?.says || [];
+  const empathizeThinks = canvasData.empathize?.thinks || [];
+  const empathizeDoes = canvasData.empathize?.does || [];
+  const empathizeFeels = canvasData.empathize?.feels || [];
+
+  // POV fields
+  const povUser = canvasData.define?.user || "";
+  const povNeeds = canvasData.define?.needs || "";
+  const povInsight = canvasData.define?.insight || "";
+
+  // Ideate fields
+  const ideateNotes = canvasData.ideate || [];
+
+  // Prototype fields
+  const prototypeList = canvasData.prototype || [];
+
+  // Test fields
+  const testWorked = canvasData.test?.worked || "";
+  const testImproved = canvasData.test?.improved || "";
+  const testQuestions = canvasData.test?.questions || "";
+  const testIdeas = canvasData.test?.ideas || "";
+
+  const updateCanvasData = (phase, fieldOrValue, value) => {
+    if (!activeProject || isReadOnly) return;
+
+    let updatedCanvas = { ...activeProject.canvasData };
+
+    if (phase === "empathize") {
+      updatedCanvas.empathize = {
+        ...updatedCanvas.empathize,
+        [fieldOrValue]: value
+      };
+    } else if (phase === "define") {
+      updatedCanvas.define = {
+        ...updatedCanvas.define,
+        [fieldOrValue]: value
+      };
+    } else if (phase === "ideate") {
+      updatedCanvas.ideate = fieldOrValue;
+    } else if (phase === "prototype") {
+      updatedCanvas.prototype = fieldOrValue;
+    } else if (phase === "test") {
+      updatedCanvas.test = {
+        ...updatedCanvas.test,
+        [fieldOrValue]: value
+      };
+    }
+
+    const updatedProject = {
+      ...activeProject,
+      canvasData: updatedCanvas,
+      lastUpdated: "Just now"
+    };
+
+    saveProject(updatedProject);
   };
 
   // --- DYNAMIC CANVAS RENDERS ---
@@ -59,19 +183,57 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const renderCanvasContent = () => {
     switch (currentPhase) {
       case "empathize":
-        return <EmpathyMapCanvas isReadOnly={isReadOnly} />;
+        return (
+          <EmpathyMapCanvas 
+            isReadOnly={isReadOnly} 
+            says={empathizeSays}
+            thinks={empathizeThinks}
+            does={empathizeDoes}
+            feels={empathizeFeels}
+            onUpdate={(quadrant, newItems) => updateCanvasData("empathize", quadrant, newItems)}
+          />
+        );
       
       case "define":
-        return <POVDefineCanvas isReadOnly={isReadOnly} />;
+        return (
+          <POVDefineCanvas 
+            isReadOnly={isReadOnly} 
+            userVal={povUser}
+            needsVal={povNeeds}
+            insightVal={povInsight}
+            onUpdate={(field, val) => updateCanvasData("define", field, val)}
+          />
+        );
 
       case "ideate":
-        return <IdeationStickyNotes isReadOnly={isReadOnly} />;
+        return (
+          <IdeationStickyNotes 
+            isReadOnly={isReadOnly} 
+            notes={ideateNotes}
+            onUpdate={(newNotes) => updateCanvasData("ideate", newNotes)}
+          />
+        );
 
       case "prototype":
-        return <UploadPrototype isReadOnly={isReadOnly} />;
+        return (
+          <UploadPrototype 
+            isReadOnly={isReadOnly} 
+            prototypes={prototypeList}
+            onUpdate={(newList) => updateCanvasData("prototype", newList)}
+          />
+        );
 
       case "test":
-        return <TestFeedbackGrid />;
+        return (
+          <TestFeedbackGrid 
+            isReadOnly={isReadOnly}
+            worked={testWorked}
+            improved={testImproved}
+            questions={testQuestions}
+            ideas={testIdeas}
+            onUpdate={(field, val) => updateCanvasData("test", field, val)}
+          />
+        );
 
       default:
         return null;
@@ -101,7 +263,9 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             {usersService.getCurrentUser()?.role === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
           </Button>
           <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800" />
-          <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200">Eco-Packaging Project</h1>
+          <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200">
+            {activeProject ? activeProject.title : "Design Thinking Project"}
+          </h1>
           {isReadOnly && (
             <Badge className="bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100/50 gap-1.5 text-xs font-semibold py-0.5 px-2 capitalize shadow-sm select-none">
               Review Mode (Read-Only)
@@ -119,7 +283,15 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             <Button 
               disabled={isReadOnly}
               className="w-full bg-zinc-900 text-zinc-50 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => navigate('/workspace/new')}
+              onClick={() => {
+                const challenges = JSON.parse(sessionStorage.getItem("challenges") || "[]");
+                if (challenges.length > 0) {
+                  // Route back to dashboard and open model
+                  navigate('/dashboard');
+                } else {
+                  navigate('/dashboard');
+                }
+              }}
             >
               <Plus className="h-4 w-4 mr-2" />
               New Project
@@ -135,14 +307,24 @@ export default function WorkspacePage({ theme, toggleTheme }) {
 
             <div className="space-y-1 pt-2">
               <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 px-1">Recent Sessions</h3>
-              {RECENT_SESSIONS.map((session) => (
+              {studentProjects.slice(0, 5).map((project) => (
                 <div 
-                  key={session.id} 
-                  className="flex items-center justify-between p-2.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-900 cursor-pointer group transition-colors"
-                  onClick={() => navigate(`/workspace/${session.id}`)}
+                  key={project.id} 
+                  className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group transition-colors ${
+                    activeProject && project.id.toString() === activeProject.id.toString()
+                      ? "bg-zinc-200 dark:bg-zinc-900"
+                      : "hover:bg-zinc-200/50 dark:hover:bg-zinc-900/50"
+                  }`}
+                  onClick={() => {
+                    if (isReadOnly) {
+                      navigate(`/teacher/review/${project.id}`);
+                    } else {
+                      navigate(`/workspace/${project.id}`);
+                    }
+                  }}
                 >
-                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate pr-2">{session.title}</span>
-                  {session.pinned && <Star className="h-3.5 w-3.5 text-yellow-500/70 fill-yellow-500/20 shrink-0" />}
+                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate pr-2">{project.title}</span>
+                  {project.isRecent && <Star className="h-3.5 w-3.5 text-yellow-500/70 fill-yellow-500/20 shrink-0" />}
                 </div>
               ))}
             </div>
@@ -153,7 +335,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
         <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-zinc-950">
           
           {/* HORIZONTAL PHASE STEPPER (Top Bar) */}
-          <PhaseStepper currentPhase={currentPhase} setCurrentPhase={setCurrentPhase} />
+          <PhaseStepper currentPhase={currentPhase} setCurrentPhase={handlePhaseChange} />
 
           {/* CENTRAL SPLIT VIEW */}
           <div className="flex flex-1 overflow-hidden">

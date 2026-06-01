@@ -2,27 +2,35 @@
 trigger: always_on
 ---
 
-# Project Overview (Current Phase: UI Layout & Interactive Prototyping)
-[cite_start]This application is an interactive educational frontend prototype designed to simulate a Socratic AI chatbot tool that guides students through the five stages of the Design Thinking methodology (Empathize, Define, Ideate, Prototype, and Test)[cite: 4, 11]. [cite_start]Its current objective is to establish a complete, clickable UI layout that demonstrates user routing, role-specific views, and phase-specific components without live backend operations.
+# Project Overview (Current Phase: Client-Side Logic, TypeScript & Live GenAI)
+This application is an educational frontend application designed to act as a Socratic AI chatbot tool that guides students through the five stages of the Design Thinking methodology (Empathize, Define, Ideate, Prototype, and Test). 
+Its current objective is to transition from a static UI layout into a fully interactive client-side application using TypeScript data contracts, `sessionStorage` for state persistence, and the live Google Gemini API for chatbot interactions.
 
-# Core Features & Requirements (UI/UX Scope Only)
-- [cite_start]Mock Socratic AI chatbot layout inside a dedicated interactive chat panel UI[cite: 46].
-- [cite_start]Interactive split-screen workspace interface integrating the chat window with conditional right-hand canvas views[cite: 46].
-- Student dashboard UI featuring a "Resume Recent Work" hero section and a responsive visual project portfolio grid.
-- [cite_start]Teacher dashboard ("Command Center") layout featuring high-level metrics, active challenges, and a student monitoring data table[cite: 74, 75, 76].
-- [cite_start]Simulated Teacher Review mode using a read-only instance of the main WorkspacePage layout[cite: 75].
-- [cite_start]Fully operational client-side routing and clickable mockup navigation for layout evaluation.
+# Core Features & Requirements
+- **Live Socratic AI Chatbot:** An interactive chat panel integrated with `@google/generative-ai` that uses prompt engineering to guide students through specific Design Thinking phases.
+- **Interactive Split-Screen Workspace:** Integrates the chat window with dynamic, phase-specific right-hand canvas views (Empathy Map, POV Canvas, Ideation Board, etc.).
+- **Data Persistence:** User authentication, project creation, and canvas inputs are managed and persisted strictly through browser `sessionStorage`. 
+- **Teacher Dashboard & Evaluation:** A "Command Center" featuring high-level metrics, active challenges, and a student monitoring table. Includes a "Two-Bot" architecture where the teacher can trigger a hidden Gemini API call to evaluate student chat logs and assign a creativity score.
+- **Role-Based Navigation:** Complete client-side routing protecting Student and Teacher views based on the active `sessionStorage` user role.
 
-# User Roles & Permissions (Navigation Prototyping)
-- [cite_start]Teacher: Restricted to the `/teacher` dashboard layout view and the read-only `/teacher/review/:projectId` workspace visualization[cite: 74, 75].
-- Student: Accesses the `/dashboard` project portfolio grid and the editable `/workspace/:projectId` interactive phase views.
+# User Roles & Permissions
+- **Teacher (Admin):** Accesses `/teacher` to manage Design Challenges, block users, and monitor class progress. Accesses `/teacher/review/:projectId` for a read-only workspace view to run AI evaluations on student work.
+- **Student:** Accesses `/dashboard` to view their project portfolio grid and `/workspace/:projectId` to interact with the AI and fill out design canvases.
 
 # Technical Stack Constraints (Current Status)
-- Framework: React 18 (Vite boilerplate)
-- Styling: Tailwind CSS
-- UI Components: shadcn/ui primitives (styled for custom layout integration)
-- Routing: React Router (`react-router-dom`)
-- Backend & Database: NOT ACTIVE. All data, project logs, and chat flows are strictly simulated using client-side static mock arrays.
+- **Framework:** React 19 (Vite boilerplate)
+- **Language:** Migrating core data models and complex logic to **TypeScript** (`.ts`/`.tsx`).
+- **Styling:** Tailwind CSS v4 (with native dark mode variables).
+- **UI Components:** shadcn/ui primitives (styled for custom layout integration).
+- **Routing:** React Router DOM v7.
+- **AI Integration:** `@google/generative-ai` and `react-markdown`.
+- **Backend & Database Constraints:** NO Node.js, Express, or MongoDB yet. All database operations must be simulated using robust `sessionStorage` arrays mapped to strict TypeScript interfaces.
 
 # Mandatory Project Architecture & Directory Map
-You must strictly align all layout views, page navigation targets, and component directories with this structural map. Do not generate files outside these boundaries:
+You must strictly align all files with this structural map. 
+- `src/components/ui/` - Atomic UI primitives (buttons, inputs).
+- `src/components/` - Complex modular features (ChatPanel, DesignCanvas, IdeationBoard).
+- `src/pages/` - Route views grouped by role (`/student`, `/teacher`, `/workspace`).
+- `src/UsersManager/` - User registration, login, and `usersService.js/ts` session logic.
+- `src/types.ts` - Centralized TypeScript interfaces (User, StudentProject, DesignChallenge, ChatMessage).
+- `src/lib/` - Service integrations (e.g., `aiService.ts`, `socraticQuestions.js`).

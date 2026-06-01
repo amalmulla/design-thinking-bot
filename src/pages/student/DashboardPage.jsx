@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   Plus, 
   ArrowRight, 
@@ -17,9 +17,12 @@ import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
 import Header from "../../components/ui/Header";
+import { Input } from "../../components/ui/input"; // Adding text input
 
 // --- MOCK DATA ---
-import { PROJECT_DATA } from "../../data/challenges";
+import { PROJECT_DATA, ACTIVE_CHALLENGES } from "../../data/challenges";
+import { createStudentProject } from "../../lib/dataModels";
+import { usersService } from "../../UsersManager/usersService";
 
 const PHASE_MAP = {
   empathize: { label: "Empathize", icon: Users, color: "text-rose-400", bg: "bg-rose-400/10", border: "border-rose-400/20" },
@@ -33,8 +36,55 @@ const PHASE_MAP = {
 
 export default function DashboardPage({ theme, toggleTheme }) {
   const navigate = useNavigate();
-  const recentProject = PROJECT_DATA.find(p => p.isRecent);
-  const otherProjects = PROJECT_DATA.filter(p => !p.isRecent);
+  
+  // Dynamic sessionStorage States
+  const [challenges] = useState(() => {
+    const stored = sessionStorage.getItem("challenges");
+    if (!stored) {
+      sessionStorage.setItem("challenges", JSON.stringify(ACTIVE_CHALLENGES));
+      return ACTIVE_CHALLENGES;
+    }
+    return JSON.parse(stored);
+  });
+
+  const [studentProjects, setStudentProjects] = useState(() => {
+    const stored = sessionStorage.getItem("studentProjects");
+    if (!stored) {
+      sessionStorage.setItem("studentProjects", JSON.stringify(PROJECT_DATA));
+      return PROJECT_DATA;
+    }
+    return JSON.parse(stored);
+  });
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [selectedChallengeId, setSelectedChallengeId] = useState("");
+
+  const activeRecentProject = studentProjects.find(p => p.isRecent || p.lastUpdated === "Just now") || studentProjects[0];
+  const otherProjects = studentProjects.filter(p => p.id !== (activeRecentProject?.id));
+
+  const handleCreateProject = () => {
+    if (!newTitle.trim()) return;
+
+    const activeUser = usersService.getCurrentUser();
+    const studentName = activeUser ? activeUser.name : "Student";
+
+    const newProject = createStudentProject(newTitle.trim(), studentName, selectedChallengeId);
+    newProject.isRecent = true;
+
+    // Reset isRecent for other items
+    const updatedProjects = studentProjects.map(p => ({ ...p, isRecent: false }));
+    updatedProjects.unshift(newProject);
+
+    sessionStorage.setItem("studentProjects", JSON.stringify(updatedProjects));
+    setStudentProjects(updatedProjects);
+
+    setNewTitle("");
+    setSelectedChallengeId("");
+    setIsModalOpen(false);
+
+    navigate(`/workspace/${newProject.id}`);
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans selection:bg-blue-500/30 transition-colors duration-200">
@@ -51,7 +101,7 @@ export default function DashboardPage({ theme, toggleTheme }) {
             <p className="text-zinc-500 dark:text-zinc-400">Ready to continue your innovation journey?</p>
           </div>
 
-          {recentProject && (
+          {activeRecentProject && (
             <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden relative group">
               {/* Subtle background glow effect */}
               <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-blue-500/10 blur-3xl rounded-full pointer-events-none" />
@@ -59,11 +109,11 @@ export default function DashboardPage({ theme, toggleTheme }) {
               <CardContent className="p-0 sm:flex items-stretch relative z-10">
                 {/* Visual Indicator Area */}
                 <div className="bg-zinc-50/50 dark:bg-zinc-950/50 p-8 sm:w-1/3 flex flex-col items-center justify-center border-b sm:border-b-0 sm:border-r border-zinc-200 dark:border-zinc-800">
-                  <div className={`p-4 rounded-2xl ${PHASE_MAP[recentProject.currentPhase].bg} mb-4`}>
-                    {React.createElement(PHASE_MAP[recentProject.currentPhase].icon, { className: `h-10 w-10 ${PHASE_MAP[recentProject.currentPhase].color}` })}
+                  <div className={`p-4 rounded-2xl ${PHASE_MAP[activeRecentProject.currentPhase].bg} mb-4`}>
+                    {React.createElement(PHASE_MAP[activeRecentProject.currentPhase].icon, { className: `h-10 w-10 ${PHASE_MAP[activeRecentProject.currentPhase].color}` })}
                   </div>
-                  <Badge variant="outline" className={`${PHASE_MAP[recentProject.currentPhase].border} ${PHASE_MAP[recentProject.currentPhase].color} bg-white dark:bg-zinc-950 px-3 py-1 text-xs uppercase tracking-wider`}>
-                    Phase: {PHASE_MAP[recentProject.currentPhase].label}
+                  <Badge variant="outline" className={`${PHASE_MAP[activeRecentProject.currentPhase].border} ${PHASE_MAP[activeRecentProject.currentPhase].color} bg-white dark:bg-zinc-950 px-3 py-1 text-xs uppercase tracking-wider`}>
+                    Phase: {PHASE_MAP[activeRecentProject.currentPhase].label}
                   </Badge>
                 </div>
 
@@ -71,30 +121,30 @@ export default function DashboardPage({ theme, toggleTheme }) {
                 <div className="p-8 sm:w-2/3 flex flex-col justify-center">
                   <div className="flex items-center text-xs text-zinc-500 mb-2 gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
-                    Last updated {recentProject.lastUpdated}
+                    Last updated {activeRecentProject.lastUpdated}
                   </div>
                   
                   <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100 mb-6 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {recentProject.title}
+                    {activeRecentProject.title}
                   </h3>
                   
                   <div className="space-y-2 mb-8 max-w-md">
                     <div className="flex justify-between text-sm">
                       <span className="text-zinc-500 dark:text-zinc-400 font-medium">Project Progress</span>
-                      <span className="text-zinc-700 dark:text-zinc-300 font-bold">{recentProject.progressPercentage}%</span>
+                      <span className="text-zinc-700 dark:text-zinc-300 font-bold">{activeRecentProject.progressPercentage}%</span>
                     </div>
                     {/* Replaced shadcn Progress with explicit Left-to-Right div implementation */}
                     <div className="h-2 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden flex justify-start">
                       <div 
                         className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-in-out" 
-                        style={{ width: `${recentProject.progressPercentage}%` }} 
+                        style={{ width: `${activeRecentProject.progressPercentage}%` }} 
                       />
                     </div>
                   </div>
 
                   <div className="mt-auto">
                     <Button 
-                      onClick={() => navigate(`/workspace/${recentProject.id}`)}
+                      onClick={() => navigate(`/workspace/${activeRecentProject.id}`)}
                       className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white transition-all font-semibold px-6 shadow-sm border border-zinc-850 dark:border-transparent"
                     >
                       Continue Working
@@ -111,9 +161,9 @@ export default function DashboardPage({ theme, toggleTheme }) {
         <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
           <h2 className="text-xl font-semibold text-zinc-800 dark:text-zinc-100">My Portfolio</h2>
             <Button 
-              onClick={() => navigate('/workspace/new')}
+              onClick={() => { if (challenges.length > 0) { setSelectedChallengeId(challenges[0].id.toString()); } setIsModalOpen(true); }}
               size="sm" 
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm font-medium transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm font-medium transition-colors cursor-pointer"
             >
               <Plus className="h-4 w-4 mr-1.5" />
               New Project
@@ -177,7 +227,7 @@ export default function DashboardPage({ theme, toggleTheme }) {
 
           {/* Empty State / Add New Placeholder in Grid */}
           <Card 
-            onClick={() => navigate('/workspace/new')}
+            onClick={() => { if (challenges.length > 0) { setSelectedChallengeId(challenges[0].id.toString()); } setIsModalOpen(true); }}
             className="bg-transparent border-2 border-dashed border-zinc-300 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900/30 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[220px] group"
           >
              <div className="h-12 w-12 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center mb-3">
@@ -189,6 +239,72 @@ export default function DashboardPage({ theme, toggleTheme }) {
         </section>
 
       </main>
+
+      {/* OVERLAY PROJECT CREATOR MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex justify-between items-center select-none">
+              <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                <Brain className="h-5 w-5 text-pink-500" />
+                Start New Project
+              </h3>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Project Title</label>
+                <Input 
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="e.g. Smart Bins sorting system"
+                  className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus-visible:ring-blue-500 h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Select Active Design Challenge</label>
+                {challenges.length === 0 ? (
+                  <p className="text-xs text-rose-500 font-semibold select-none">No active challenges available. Please contact your teacher.</p>
+                ) : (
+                  <select
+                    value={selectedChallengeId}
+                    onChange={(e) => setSelectedChallengeId(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  >
+                    {challenges.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex justify-end gap-3">
+              <Button 
+                variant="ghost" 
+                onClick={() => setIsModalOpen(false)} 
+                className="text-zinc-550 dark:text-zinc-450 hover:text-zinc-850 hover:bg-zinc-100 dark:hover:bg-zinc-800 h-9"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateProject} 
+                disabled={!newTitle.trim() || !selectedChallengeId}
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-9 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Launch Project
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
 
     

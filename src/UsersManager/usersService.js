@@ -1,5 +1,6 @@
 // usersService.js
 // Service to manage users state persisted in sessionStorage
+import { createUser } from "../lib/dataModels";
 
 const INITIAL_USERS = [
   {
@@ -97,14 +98,7 @@ export const usersService = {
       throw new Error("An account with this email already exists.");
     }
 
-    const newUser = {
-      id: Date.now().toString(),
-      name,
-      email,
-      password,
-      role,
-      blocked: false
-    };
+    const newUser = createUser(name, email, password, role);
 
     users.push(newUser);
     saveUsers(users);
