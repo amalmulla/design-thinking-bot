@@ -26,31 +26,3 @@ trigger: always_on
 
 # Mandatory Project Architecture & Directory Map
 You must strictly align all layout views, page navigation targets, and component directories with this structural map. Do not generate files outside these boundaries:
-
-```text
-/src
-  /components
-    /ui                 -> shadcn/ui atomic primitives
-    /Chat               -> Mock Socratic chatbot panel interface components [cite: 59]
-    /DesignCanvas       -> Visual canvas elements for step data capture [cite: 60]
-    /PersonaBuilder     -> Dynamic component container for Empathy Map/Persona states [cite: 61]
-    /IdeationBoard      -> Brainstorming layout with digital sticky notes placeholders [cite: 62]
-    /PrototypeTools     -> Low-fidelity prototype planner and template wireframes [cite: 63]
-    /ProgressTracker    -> Visual phase step tracking components [cite: 64]
-  /pages
-    /student
-      - DashboardPage.jsx    -> Student portfolio layout & active project launcher
-    /teacher
-      - TeacherDashboard.jsx -> Instructor analytics command center & project review table
-    /workspace
-      - WorkspacePage.jsx    -> Split-screen environment (Shared/Reused for student edit & teacher read-only view)
-    - LoginPage.jsx          -> Simple entry gate simulating role routing toggles
-  /lib
-    - firebase.js            -> [Placeholder] Currently exports mock authentication states
-    - designThinkingEngine.js -> [Placeholder] Local state handlers for client phase-switching
-    - socraticQuestions.js    -> Static prompt text banks from syllabus for mock display [cite: 134]
-    - analytics.js            -> [Placeholder] Static array configurations for metric displays
-  /data
-    - challenges.js           -> Mock dictionary of administrator design targets [cite: 97]
-    - templates.js            -> Blueprints and layouts for visual canvas elements [cite: 98]
-    - questions.js            -> Arrays containing standard baseline question sequences [cite: 99]

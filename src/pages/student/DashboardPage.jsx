@@ -19,41 +19,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../comp
 import Header from "../../components/ui/Header";
 
 // --- MOCK DATA ---
-
-const PROJECT_DATA = [
-  {
-    id: 1,
-    title: "Eco-Packaging Solution",
-    currentPhase: "ideate",
-    progressPercentage: 60,
-    lastUpdated: "2 hours ago",
-    isRecent: true,
-  },
-  {
-    id: 2,
-    title: "Library App Redesign",
-    currentPhase: "define",
-    progressPercentage: 40,
-    lastUpdated: "1 day ago",
-    isRecent: false,
-  },
-  {
-    id: 3,
-    title: "Student Onboarding Experience",
-    currentPhase: "empathize",
-    progressPercentage: 20,
-    lastUpdated: "3 days ago",
-    isRecent: false,
-  },
-  {
-    id: 4,
-    title: "Campus Navigation AR",
-    currentPhase: "test",
-    progressPercentage: 90,
-    lastUpdated: "1 week ago",
-    isRecent: false,
-  }
-];
+import { PROJECT_DATA } from "../../data/challenges";
 
 const PHASE_MAP = {
   empathize: { label: "Empathize", icon: Users, color: "text-rose-400", bg: "bg-rose-400/10", border: "border-rose-400/20" },
