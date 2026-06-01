@@ -6,13 +6,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
-import { ScrollArea } from "../../components/ui/scroll-area";
 import { Separator } from "../../components/ui/separator";
 import Header from "../../components/ui/Header";
 import { usersService } from "../../UsersManager/usersService";
 import { getRandomPrompt } from "../../lib/socraticQuestions";
 import { createChatMessage } from "../../lib/dataModels";
 import { PROJECT_DATA } from "../../data/challenges";
+import { getSocraticChatCompletion } from "../../lib/aiService";
 
 // Modular Workspace Components
 import PhaseStepper from "../../components/ProgressTracker/PhaseStepper";
@@ -50,6 +50,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const [currentPhase, setCurrentPhase] = useState("empathize");
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
+  const [isAiTyping, setIsAiTyping] = useState(false);
 
   // Sync state on project loading
   useEffect(() => {
@@ -60,11 +61,20 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   }, [projectId, activeProject?.id]);
 
   const saveProject = (updatedProj) => {
-    const updatedProjects = studentProjects.map((p) =>
-      p.id.toString() === updatedProj.id.toString() ? updatedProj : p
-    );
-    sessionStorage.setItem("studentProjects", JSON.stringify(updatedProjects));
-    setStudentProjects(updatedProjects);
+    if (!updatedProj || !updatedProj.id) {
+      console.error("[Workspace] Cannot save project: invalid project data", updatedProj);
+      return;
+    }
+    try {
+      const updatedProjects = studentProjects.map((p) => {
+        if (!p || !p.id) return p;
+        return p.id.toString() === updatedProj.id.toString() ? updatedProj : p;
+      }).filter(Boolean);
+      sessionStorage.setItem("studentProjects", JSON.stringify(updatedProjects));
+      setStudentProjects(updatedProjects);
+    } catch (err) {
+      console.error("[Workspace] Error saving project to sessionStorage:", err);
+    }
   };
 
   const handlePhaseChange = (newPhase) => {
@@ -87,9 +97,10 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     }
   };
 
-  const handleSendMessage = (text) => {
-    if (!text.trim() || !activeProject || isReadOnly) return;
+  const handleSendMessage = async (text) => {
+    if (!text.trim() || !activeProject || isReadOnly || isAiTyping) return;
     
+    // 1. Append User Message
     const userMsg = createChatMessage("user", text);
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -102,9 +113,11 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     };
     saveProject(updatedProjWithUser);
     
-    // Simulate Socratic AI response
-    setTimeout(() => {
-      const aiMsg = createChatMessage("ai", getRandomPrompt(currentPhase));
+    // 2. Set loading status and trigger live GenAI chat
+    setIsAiTyping(true);
+    try {
+      const aiResponseText = await getSocraticChatCompletion(newMessages, currentPhase);
+      const aiMsg = createChatMessage("ai", aiResponseText);
       const finalMessages = [...newMessages, aiMsg];
       setMessages(finalMessages);
       
@@ -114,7 +127,11 @@ export default function WorkspacePage({ theme, toggleTheme }) {
         lastUpdated: "Just now"
       };
       saveProject(updatedProjWithAI);
-    }, 1000);
+    } catch (err) {
+      console.error("[Socratic Chatbot] Error generating AI response:", err);
+    } finally {
+      setIsAiTyping(false);
+    }
   };
 
   // Safe canvas data resolution
@@ -146,36 +163,47 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const updateCanvasData = (phase, fieldOrValue, value) => {
     if (!activeProject || isReadOnly) return;
 
-    let updatedCanvas = { ...activeProject.canvasData };
+    try {
+      const canvasData = activeProject.canvasData || {};
+      let updatedCanvas = { ...canvasData };
 
-    if (phase === "empathize") {
-      updatedCanvas.empathize = {
-        ...updatedCanvas.empathize,
-        [fieldOrValue]: value
+      if (phase === "empathize") {
+        // Cast array types to objects to avoid key spreads
+        const currentEmpathize = typeof canvasData.empathize === "object" && !Array.isArray(canvasData.empathize)
+          ? canvasData.empathize
+          : {};
+        updatedCanvas.empathize = {
+          ...currentEmpathize,
+          [fieldOrValue]: value
+        };
+      } else if (phase === "define") {
+        const currentDefine = typeof canvasData.define === "object" ? canvasData.define : {};
+        updatedCanvas.define = {
+          ...currentDefine,
+          [fieldOrValue]: value
+        };
+      } else if (phase === "ideate") {
+        updatedCanvas.ideate = fieldOrValue;
+      } else if (phase === "prototype") {
+        updatedCanvas.prototype = fieldOrValue;
+      } else if (phase === "test") {
+        const currentTest = typeof canvasData.test === "object" ? canvasData.test : {};
+        updatedCanvas.test = {
+          ...currentTest,
+          [fieldOrValue]: value
+        };
+      }
+
+      const updatedProject = {
+        ...activeProject,
+        canvasData: updatedCanvas,
+        lastUpdated: "Just now"
       };
-    } else if (phase === "define") {
-      updatedCanvas.define = {
-        ...updatedCanvas.define,
-        [fieldOrValue]: value
-      };
-    } else if (phase === "ideate") {
-      updatedCanvas.ideate = fieldOrValue;
-    } else if (phase === "prototype") {
-      updatedCanvas.prototype = fieldOrValue;
-    } else if (phase === "test") {
-      updatedCanvas.test = {
-        ...updatedCanvas.test,
-        [fieldOrValue]: value
-      };
+
+      saveProject(updatedProject);
+    } catch (err) {
+      console.error("[Workspace] Error updating canvas data:", err);
     }
-
-    const updatedProject = {
-      ...activeProject,
-      canvasData: updatedCanvas,
-      lastUpdated: "Just now"
-    };
-
-    saveProject(updatedProject);
   };
 
   // --- DYNAMIC CANVAS RENDERS ---
@@ -348,6 +376,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               handleSendMessage={handleSendMessage}
               currentPhase={currentPhase}
               isReadOnly={isReadOnly}
+              isAiTyping={isAiTyping}
             />
 
             {/* PANEL 3: PHASE DELIVERABLES CANVAS (Right Column, 50%) */}
@@ -363,12 +392,10 @@ export default function WorkspacePage({ theme, toggleTheme }) {
                 </Button>
               </div>
 
-              {/* Dynamic Canvas Area */}
-              <ScrollArea className="flex-1">
-                <div className="p-6 h-full bg-white dark:bg-zinc-950">
-                  {renderCanvasContent()}
-                </div>
-              </ScrollArea>
+              {/* Dynamic Canvas Area Viewport */}
+              <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-zinc-950 scrollbar-thin">
+                {renderCanvasContent()}
+              </div>
 
             </section>
           </div>
