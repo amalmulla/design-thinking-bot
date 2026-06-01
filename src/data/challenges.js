@@ -8,44 +8,107 @@ export const ACTIVE_CHALLENGES = [
 ];
 
 export const STUDENT_PROJECTS = [
-  { id: 1, studentOrTeamName: "Team Alpha", projectTitle: "Smart Bin Sorting System", currentPhase: "ideate", creativityScore: "High", teamworkStatus: "Excellent", lastActiveDate: "2 hours ago", challengeId: 1 },
-  { id: 2, studentOrTeamName: "Sarah Jenkins", projectTitle: "AR Study Room Finder", currentPhase: "prototype", creativityScore: "Medium", teamworkStatus: "Solo", lastActiveDate: "1 day ago", challengeId: 2 },
-  { id: 3, studentOrTeamName: "Team Beta", projectTitle: "Compost Gamification", currentPhase: "empathize", creativityScore: "Needs Focus", teamworkStatus: "Needs Work", lastActiveDate: "3 days ago", challengeId: 1 },
-  { id: 4, studentOrTeamName: "Marcus Wei", projectTitle: "Digital Orientation Map", currentPhase: "test", creativityScore: "High", teamworkStatus: "Solo", lastActiveDate: "4 hours ago", challengeId: 3 },
-  { id: 5, studentOrTeamName: "Team Delta", projectTitle: "Book Reservation Flow", currentPhase: "define", creativityScore: "Medium", teamworkStatus: "Good", lastActiveDate: "2 days ago", challengeId: 2 }
-];
-
-export const PROJECT_DATA = [
   {
     id: 1,
-    title: "Eco-Packaging Solution",
+    studentOrTeamName: "Team Alpha",
+    title: "Smart Bin Sorting System",
     currentPhase: "ideate",
     progressPercentage: 60,
     lastUpdated: "2 hours ago",
+    creativityScore: "High",
+    teamworkStatus: "Excellent",
+    challengeId: 1,
     isRecent: true,
+    canvasData: {
+      empathize: { says: [], thinks: [], does: [], feels: [] },
+      define: { user: "", needs: "", insight: "" },
+      ideate: [],
+      prototype: [],
+      test: { worked: "", improved: "", questions: "", ideas: "" }
+    },
+    messages: []
   },
   {
     id: 2,
-    title: "Library App Redesign",
-    currentPhase: "define",
-    progressPercentage: 40,
+    studentOrTeamName: "Sarah Jenkins",
+    title: "AR Study Room Finder",
+    currentPhase: "prototype",
+    progressPercentage: 80,
     lastUpdated: "1 day ago",
+    creativityScore: "Medium",
+    teamworkStatus: "Solo",
+    challengeId: 2,
     isRecent: false,
+    canvasData: {
+      empathize: { says: [], thinks: [], does: [], feels: [] },
+      define: { user: "", needs: "", insight: "" },
+      ideate: [],
+      prototype: [],
+      test: { worked: "", improved: "", questions: "", ideas: "" }
+    },
+    messages: []
   },
   {
     id: 3,
-    title: "Student Onboarding Experience",
+    studentOrTeamName: "Team Beta",
+    title: "Compost Gamification",
     currentPhase: "empathize",
     progressPercentage: 20,
     lastUpdated: "3 days ago",
+    creativityScore: "Needs Focus",
+    teamworkStatus: "Needs Work",
+    challengeId: 1,
     isRecent: false,
+    canvasData: {
+      empathize: { says: [], thinks: [], does: [], feels: [] },
+      define: { user: "", needs: "", insight: "" },
+      ideate: [],
+      prototype: [],
+      test: { worked: "", improved: "", questions: "", ideas: "" }
+    },
+    messages: []
   },
   {
     id: 4,
-    title: "Campus Navigation AR",
+    studentOrTeamName: "Marcus Wei",
+    title: "Digital Orientation Map",
     currentPhase: "test",
-    progressPercentage: 90,
-    lastUpdated: "1 week ago",
+    progressPercentage: 100,
+    lastUpdated: "4 hours ago",
+    creativityScore: "High",
+    teamworkStatus: "Solo",
+    challengeId: 3,
     isRecent: false,
+    canvasData: {
+      empathize: { says: [], thinks: [], does: [], feels: [] },
+      define: { user: "", needs: "", insight: "" },
+      ideate: [],
+      prototype: [],
+      test: { worked: "", improved: "", questions: "", ideas: "" }
+    },
+    messages: []
+  },
+  {
+    id: 5,
+    studentOrTeamName: "Team Delta",
+    title: "Book Reservation Flow",
+    currentPhase: "define",
+    progressPercentage: 40,
+    lastUpdated: "2 days ago",
+    creativityScore: "Medium",
+    teamworkStatus: "Good",
+    challengeId: 2,
+    isRecent: false,
+    canvasData: {
+      empathize: { says: [], thinks: [], does: [], feels: [] },
+      define: { user: "", needs: "", insight: "" },
+      ideate: [],
+      prototype: [],
+      test: { worked: "", improved: "", questions: "", ideas: "" }
+    },
+    messages: []
   }
 ];
+
+export const PROJECT_DATA = STUDENT_PROJECTS;
+

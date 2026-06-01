@@ -73,7 +73,28 @@ export default function TeacherDashboard({ theme, toggleTheme }) {
       sessionStorage.setItem("studentProjects", JSON.stringify(STUDENT_PROJECTS));
       return STUDENT_PROJECTS;
     }
-    return JSON.parse(stored);
+    
+    try {
+      const parsed = JSON.parse(stored);
+      // Map and migrate any legacy or incomplete cached data models in sessionStorage
+      const migrated = parsed.map((p, idx) => {
+        const template = STUDENT_PROJECTS.find(t => t.id.toString() === p.id.toString()) || {};
+        return {
+          ...p,
+          studentOrTeamName: p.studentOrTeamName || template.studentOrTeamName || `Team ${String.fromCharCode(65 + idx)}`,
+          title: p.title || p.projectTitle || template.title || "Untitled Project",
+          creativityScore: p.creativityScore || template.creativityScore || "Not Evaluated",
+          teamworkStatus: p.teamworkStatus || template.teamworkStatus || "Solo",
+          lastUpdated: p.lastUpdated || p.lastActiveDate || template.lastUpdated || "Just now"
+        };
+      });
+      sessionStorage.setItem("studentProjects", JSON.stringify(migrated));
+      return migrated;
+    } catch (e) {
+      console.error("[TeacherDashboard] Error restoring studentProjects cache, resetting to defaults", e);
+      sessionStorage.setItem("studentProjects", JSON.stringify(STUDENT_PROJECTS));
+      return STUDENT_PROJECTS;
+    }
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -298,10 +319,10 @@ export default function TeacherDashboard({ theme, toggleTheme }) {
                     return (
                       <TableRow key={project.id} className="border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30 transition-colors">
                         <TableCell className="font-medium text-zinc-800 dark:text-zinc-200">
-                          {project.studentOrTeamName}
+                          {project.studentOrTeamName || "Student"}
                         </TableCell>
                         <TableCell className="text-zinc-700 dark:text-zinc-350 font-medium">
-                          {project.projectTitle}
+                          {project.title || project.projectTitle || "Untitled Project"}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -312,13 +333,13 @@ export default function TeacherDashboard({ theme, toggleTheme }) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {renderStatusBadge(project.creativityScore, 'creativity')}
+                          {renderStatusBadge(project.creativityScore || "Not Evaluated", 'creativity')}
                         </TableCell>
                         <TableCell>
-                          {renderStatusBadge(project.teamworkStatus, 'teamwork')}
+                          {renderStatusBadge(project.teamworkStatus || "Solo", 'teamwork')}
                         </TableCell>
                         <TableCell className="text-xs text-zinc-400 dark:text-zinc-500">
-                          {project.lastActiveDate}
+                          {project.lastUpdated || project.lastActiveDate || "Recently"}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button 
