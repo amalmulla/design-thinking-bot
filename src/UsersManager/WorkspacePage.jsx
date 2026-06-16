@@ -3,25 +3,25 @@ import { Plus, Search, Star, ArrowLeft } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 // Standard shadcn/ui style components
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
-import Header from "../../components/ui/Header";
-import { usersService } from "../../UsersManager/usersService";
-import { getRandomPrompt } from "../../lib/socraticQuestions";
-import { createChatMessage } from "../../lib/dataModels";
-import { PROJECT_DATA } from "../../data/challenges";
-import { getSocraticChatCompletion } from "../../lib/aiService";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Badge } from "../components/ui/badge";
+import { Separator } from "../components/ui/separator";
+import Header from "../components/ui/Header";
+import { usersService } from "./usersService";
+import { getRandomPrompt } from "../components/ChatBot/socraticQuestions";
+import { createChatMessage } from "../lib/dataModels";
+import { PROJECT_DATA } from "../data/challenges";
+import { getSocraticChatCompletion } from "../lib/aiService";
 
 // Modular Workspace Components
-import PhaseStepper from "../../components/ProgressTracker/PhaseStepper";
-import ChatPanel from "../../components/Chat/ChatPanel";
-import EmpathyMapCanvas from "../../components/PersonaBuilder/EmpathyMapCanvas";
-import POVDefineCanvas from "../../components/DesignCanvas/POVDefineCanvas";
-import IdeationStickyNotes from "../../components/IdeationBoard/IdeationStickyNotes";
-import UploadPrototype from "../../components/PrototypeTools/UploadPrototype";
-import TestFeedbackGrid from "../../components/DesignCanvas/TestFeedbackGrid";
+import PhaseStepper from "../components/ProgressTracker/PhaseStepper";
+import ChatPanel from "../components/ChatBot/ChatPanel";
+import EmpathyMapCanvas from "../components/PersonaBuilder/EmpathyMapCanvas";
+import POVDefineCanvas from "../components/DesignCanvas/POVDefineCanvas";
+import IdeationStickyNotes from "../components/IdeationBoard/IdeationStickyNotes";
+import UploadPrototype from "../components/PrototypeTools/UploadPrototype";
+import TestFeedbackGrid from "../components/DesignCanvas/TestFeedbackGrid";
 
 // --- MAIN COMPONENT ---
 

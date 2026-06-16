@@ -1,4 +1,4 @@
-import { SOCRATIC_PROMPTS, getRandomPrompt } from "./socraticQuestions";
+import { SOCRATIC_PROMPTS, getRandomPrompt } from "../components/ChatBot/socraticQuestions";
 
 /**
  * Gets Socratic chat completions from Cerebras API, tailored to the current design phase.

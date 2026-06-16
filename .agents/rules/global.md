@@ -29,8 +29,8 @@ Its current objective is to transition from a static UI layout into a fully inte
 # Mandatory Project Architecture & Directory Map
 You must strictly align all files with this structural map. 
 - `src/components/ui/` - Atomic UI primitives (buttons, inputs).
-- `src/components/` - Complex modular features (ChatPanel, DesignCanvas, IdeationBoard).
-- `src/pages/` - Route views grouped by role (`/student`, `/teacher`, `/workspace`).
-- `src/UsersManager/` - User registration, login, and `usersService.js/ts` session logic.
+- `src/components/` - Complex modular features (DesignCanvas, IdeationBoard).
+- `src/components/ChatBot/` - Chat panel UI and conversational data files (`socraticQuestions.js`).
+- `src/UsersManager/` - Consolidated user domain including unified dashboard, workspaces, auth, and user logic.
 - `src/types.ts` - Centralized TypeScript interfaces (User, StudentProject, DesignChallenge, ChatMessage).
 - `src/lib/` - Service integrations (e.g., `aiService.ts`, `socraticQuestions.js`).

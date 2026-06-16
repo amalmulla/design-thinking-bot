@@ -3,10 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { usersService } from './UsersManager/usersService';
 
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/student/DashboardPage';
-import WorkspacePage from './pages/workspace/WorkspacePage';
-import TeacherDashboard from './pages/teacher/TeacherDashboard'; 
+import LoginPage from './UsersManager/LoginPage';
+import Dashboard from './UsersManager/Dashboard';
+import WorkspacePage from './UsersManager/WorkspacePage';
 
 // New User Manager Components
 import Register from './UsersManager/Register';
@@ -92,7 +91,7 @@ export default function App() {
             path="/dashboard" 
             element={
               <ProtectedRoute allowedRoles={['student']}>
-                <DashboardPage theme={theme} toggleTheme={toggleTheme} />
+                <Dashboard theme={theme} toggleTheme={toggleTheme} />
               </ProtectedRoute>
             } 
           />
@@ -118,7 +117,7 @@ export default function App() {
             path="/teacher" 
             element={
               <ProtectedRoute allowedRoles={['teacher']}>
-                <TeacherDashboard theme={theme} toggleTheme={toggleTheme} />
+                <Dashboard theme={theme} toggleTheme={toggleTheme} />
               </ProtectedRoute>
             } 
           /> 
