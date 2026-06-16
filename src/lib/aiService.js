@@ -1,8 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SOCRATIC_PROMPTS, getRandomPrompt } from "./socraticQuestions";
 
 /**
- * Gets Socratic chat completions from Google's Gemini API, tailored to the current design phase.
+ * Gets Socratic chat completions from Cerebras API, tailored to the current design phase.
  * If VITE_API_KEY is not configured, automatically runs a simulated local Socratic prompt response.
  * 
  * @param {Array<Object>} messages - Full chat conversation history
@@ -27,8 +26,6 @@ export async function getSocraticChatCompletion(messages, phase) {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-
     // Retrieve custom Socratic prompts based on stage
     const samplePrompts = SOCRATIC_PROMPTS[phase] || SOCRATIC_PROMPTS["empathize"];
     const systemPrompt = `You are a supportive, insightful educational AI acting as a Socratic Design Thinking facilitator.
@@ -43,37 +40,47 @@ ${samplePrompts.map(p => `- ${p}`).join("\n")}
 
 Format your response using clean Markdown (e.g., bullet points, bold emphasis, headings) to make it easy to read. Keep the tone warm, academic, and encouraging.`;
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: systemPrompt,
-    });
+    // Format chat history for OpenAI-compatible Cerebras API
+    // Cerebras/OpenAI format expects: { role: 'user' | 'assistant' | 'system', content: string }
+    const formattedMessages = [
+      { role: "system", content: systemPrompt }
+    ];
 
-    // Format chat history for Gemini API
-    // Gemini chat history expects: { role: 'user' | 'model', parts: [{ text: string }] }
-    // Our state uses: { role: 'user' | 'ai', content: string }
-    const history = [];
-
-    // Map previous turns (excluding the very last prompt, which is passed in sendMessage)
-    for (let i = 0; i < messages.length - 1; i++) {
-      const msg = messages[i];
-      history.push({
-        role: msg.role === "ai" ? "model" : "user",
-        parts: [{ text: msg.content }]
+    // Map previous turns
+    for (const msg of messages) {
+      formattedMessages.push({
+        role: msg.role === "ai" ? "assistant" : "user",
+        content: msg.content
       });
     }
 
-    const lastMessage = messages[messages.length - 1];
-    const userText = lastMessage ? lastMessage.content : "";
-
-    const chat = model.startChat({
-      history: history,
+    // Call the local Vite proxy to bypass CORS
+    const response = await fetch("/api-cerebras/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-oss-120b",
+        messages: formattedMessages,
+        temperature: 0.7
+      })
     });
 
-    const result = await chat.sendMessage(userText);
-    const response = await result.response;
-    return response.text();
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Cerebras API returned status ${response.status}: ${errorData}`);
+    }
+
+    const data = await response.json();
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return data.choices[0].message.content;
+    } else {
+      throw new Error("Invalid response format from Cerebras API");
+    }
   } catch (error) {
-    console.error("[Socratic AI] Live API communication failed:", error);
+    console.error("[Socratic AI] Live Cerebras API communication failed:", error);
     console.warn("[Socratic AI] Gracefully falling back to simulated Socratic response.");
 
     // Fall back to high-quality simulated prompts to ensure a premium, crash-free student experience
