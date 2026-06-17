@@ -9,9 +9,9 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import Header from "../components/ui/Header";
 import { usersService } from "./usersService";
+import { apiService } from "../lib/apiService";
 import { getRandomPrompt } from "../components/ChatBot/socraticQuestions";
 import { createChatMessage } from "../lib/dataModels";
-import { PROJECT_DATA } from "../data/challenges";
 import { getSocraticChatCompletion } from "../lib/aiService";
 
 // Modular Workspace Components
@@ -29,104 +29,117 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
-  // Dynamic sessionStorage States
-  const [studentProjects, setStudentProjects] = useState(() => {
-    const stored = sessionStorage.getItem("studentProjects");
-    if (!stored) {
-      sessionStorage.setItem("studentProjects", JSON.stringify(PROJECT_DATA));
-      return PROJECT_DATA;
-    }
-    return JSON.parse(stored);
-  });
-
-  // Simulated Read-Only state for Teacher Review
-  const isReadOnly = window.location.pathname.includes('/teacher/review/');
-
-  // Find active project or fallback to first
-  const activeProject = studentProjects.find(
-    (p) => p.id.toString() === projectId?.toString()
-  ) || studentProjects[0] || null;
+  const [studentProjects, setStudentProjects] = useState([]);
+  const [activeProject, setActiveProject] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [currentPhase, setCurrentPhase] = useState("empathize");
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [isAiTyping, setIsAiTyping] = useState(false);
 
+  // Simulated Read-Only state for Teacher Review
+  const isReadOnly = window.location.pathname.includes('/teacher/review/');
+
   // Sync state on project loading
   useEffect(() => {
-    if (activeProject) {
-      setCurrentPhase(activeProject.currentPhase || "empathize");
-      setMessages(activeProject.messages || []);
-    }
-  }, [projectId, activeProject?.id]);
+    const fetchWorkspaceData = async () => {
+      try {
+        setIsLoading(true);
+        const currentUser = usersService.getCurrentUser();
+        const isTeacher = currentUser?.role?.toLowerCase() === 'teacher';
 
-  const saveProject = (updatedProj) => {
-    if (!updatedProj || !updatedProj.id) {
-      console.error("[Workspace] Cannot save project: invalid project data", updatedProj);
-      return;
-    }
-    try {
-      const updatedProjects = studentProjects.map((p) => {
-        if (!p || !p.id) return p;
-        return p.id.toString() === updatedProj.id.toString() ? updatedProj : p;
-      }).filter(Boolean);
-      sessionStorage.setItem("studentProjects", JSON.stringify(updatedProjects));
-      setStudentProjects(updatedProjects);
-    } catch (err) {
-      console.error("[Workspace] Error saving project to sessionStorage:", err);
-    }
-  };
+        // Load side panel projects
+        const allProjects = await apiService.getProjects(isTeacher ? undefined : currentUser?.id);
+        const normalizedProjects = (allProjects || []).map(p => ({ 
+          ...p, 
+          id: p._id || p.id, 
+          title: p.name || p.title || 'Untitled Project',
+          currentPhase: p.currentPhase?.toLowerCase() || 'empathize' 
+        }));
+        setStudentProjects(normalizedProjects);
 
-  const handlePhaseChange = (newPhase) => {
+        // Load active project canvas
+        if (projectId && projectId !== 'new') {
+          const projectRaw = await apiService.getProjectById(projectId);
+          const normalizedActive = { 
+            ...projectRaw, 
+            id: projectRaw._id || projectRaw.id, 
+            title: projectRaw.name || projectRaw.title || 'Untitled Project',
+            currentPhase: projectRaw.currentPhase?.toLowerCase() || 'empathize' 
+          };
+          setActiveProject(normalizedActive);
+          setCurrentPhase(normalizedActive.currentPhase);
+          setMessages(normalizedActive.messages || []);
+        } else if (normalizedProjects.length > 0) {
+          const fallbackProject = normalizedProjects[0];
+          setActiveProject(fallbackProject);
+          setCurrentPhase(fallbackProject.currentPhase);
+          setMessages(fallbackProject.messages || []);
+        }
+      } catch (err) {
+        console.error("Failed to load workspace data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchWorkspaceData();
+  }, [projectId]);
+
+  const handlePhaseChange = async (newPhase) => {
     setCurrentPhase(newPhase);
     if (activeProject && !isReadOnly) {
-      const phaseProgress = {
-        empathize: 20,
-        define: 40,
-        ideate: 60,
-        prototype: 80,
-        test: 100
-      };
+      const phaseProgress = { empathize: 20, define: 40, ideate: 60, prototype: 80, test: 100 };
       const updated = {
         ...activeProject,
         currentPhase: newPhase,
-        progressPercentage: phaseProgress[newPhase] || activeProject.progressPercentage,
-        lastUpdated: "Just now"
+        progressPercentage: phaseProgress[newPhase] || activeProject.progressPercentage
       };
-      saveProject(updated);
+      
+      setActiveProject(updated); // Optimistic UI update
+      
+      try {
+        await apiService.updateProject(activeProject.id, { 
+          currentPhase: newPhase,
+          progressPercentage: phaseProgress[newPhase] || activeProject.progressPercentage
+        });
+      } catch (err) {
+        console.error("Failed to update phase to DB:", err);
+      }
     }
   };
 
   const handleSendMessage = async (text) => {
     if (!text.trim() || !activeProject || isReadOnly || isAiTyping) return;
     
-    // 1. Append User Message
     const userMsg = createChatMessage("user", text);
     const newMessages = [...messages, userMsg];
+    
+    // Optimistic local update
     setMessages(newMessages);
     setInputValue("");
+    setActiveProject(prev => ({ ...prev, messages: newMessages }));
     
-    const updatedProjWithUser = {
-      ...activeProject,
-      messages: newMessages,
-      lastUpdated: "Just now"
-    };
-    saveProject(updatedProjWithUser);
+    // Transmit user msg array to DB
+    try {
+      await apiService.updateProject(activeProject.id, { messages: newMessages });
+    } catch (err) {
+      console.error("Failed to save user message:", err);
+    }
     
-    // 2. Set loading status and trigger live GenAI chat
+    // Trigger live GenAI chat
     setIsAiTyping(true);
     try {
       const aiResponseText = await getSocraticChatCompletion(newMessages, currentPhase);
       const aiMsg = createChatMessage("ai", aiResponseText);
       const finalMessages = [...newMessages, aiMsg];
-      setMessages(finalMessages);
       
-      const updatedProjWithAI = {
-        ...activeProject,
-        messages: finalMessages,
-        lastUpdated: "Just now"
-      };
-      saveProject(updatedProjWithAI);
+      // Optimistic local update
+      setMessages(finalMessages);
+      setActiveProject(prev => ({ ...prev, messages: finalMessages }));
+      
+      // Transmit AI msg array to DB
+      await apiService.updateProject(activeProject.id, { messages: finalMessages });
     } catch (err) {
       console.error("[Socratic Chatbot] Error generating AI response:", err);
     } finally {
@@ -160,7 +173,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const testQuestions = canvasData.test?.questions || "";
   const testIdeas = canvasData.test?.ideas || "";
 
-  const updateCanvasData = (phase, fieldOrValue, value) => {
+  const updateCanvasData = async (phase, fieldOrValue, value) => {
     if (!activeProject || isReadOnly) return;
 
     try {
@@ -168,7 +181,6 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       let updatedCanvas = { ...canvasData };
 
       if (phase === "empathize") {
-        // Cast array types to objects to avoid key spreads
         const currentEmpathize = typeof canvasData.empathize === "object" && !Array.isArray(canvasData.empathize)
           ? canvasData.empathize
           : {};
@@ -194,13 +206,15 @@ export default function WorkspacePage({ theme, toggleTheme }) {
         };
       }
 
-      const updatedProject = {
-        ...activeProject,
-        canvasData: updatedCanvas,
-        lastUpdated: "Just now"
-      };
+      // Optimistic Update
+      setActiveProject(prev => ({ ...prev, canvasData: updatedCanvas }));
 
-      saveProject(updatedProject);
+      // Database Patch
+      await apiService.updateProject(activeProject.id, { 
+        canvasData: updatedCanvas, 
+        currentPhase: currentPhase 
+      });
+
     } catch (err) {
       console.error("[Workspace] Error updating canvas data:", err);
     }
@@ -268,6 +282,17 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-screen w-full bg-white dark:bg-zinc-950 flex items-center justify-center font-sans">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-zinc-500 font-medium animate-pulse">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen w-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans overflow-hidden transition-colors duration-200">
       
@@ -280,7 +305,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8 cursor-pointer"
             onClick={() => {
               const activeUser = usersService.getCurrentUser();
-              if (activeUser && activeUser.role === "teacher") {
+              if (activeUser && activeUser.role?.toLowerCase() === "teacher") {
                 navigate("/teacher");
               } else {
                 navigate("/dashboard");
@@ -288,7 +313,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             }}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            {usersService.getCurrentUser()?.role === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
+            {usersService.getCurrentUser()?.role?.toLowerCase() === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
           </Button>
           <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800" />
           <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200">

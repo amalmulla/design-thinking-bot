@@ -48,7 +48,7 @@ export default function Header({
         {currentUser && (
           <>
             {/* [Role Badge] ("Student" or "Teacher") */}
-            {currentUser.role === "teacher" ? (
+            {currentUser.role?.toLowerCase() === "teacher" ? (
               <Badge 
                 variant="secondary" 
                 className="bg-indigo-100 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-semibold px-2.5 py-0.5 capitalize shadow-sm text-xs cursor-default"

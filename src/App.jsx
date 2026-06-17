@@ -21,9 +21,9 @@ function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
+  if (allowedRoles && currentUser.role && !allowedRoles.includes(currentUser.role.toLowerCase())) {
     // Role not authorized (e.g., student attempting to view admin panel)
-    return <Navigate to={currentUser.role === 'teacher' ? '/teacher' : '/dashboard'} replace />;
+    return <Navigate to={currentUser.role.toLowerCase() === 'teacher' ? '/teacher' : '/dashboard'} replace />;
   }
 
   return children;

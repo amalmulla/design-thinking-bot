@@ -24,7 +24,7 @@ export default function LoginPage() {
     setError(""); // Clear error message when user starts typing
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.email.trim() || !formData.password) {
@@ -33,12 +33,9 @@ export default function LoginPage() {
     }
 
     try {
-      // Validate credentials using our sessionStorage service
-      const loggedUser = usersService.login(formData.email.trim(), formData.password);
+      // Validate credentials using our asynchronous service
+      const loggedUser = await usersService.login(formData.email.trim(), formData.password);
       
-      // Dispatch storage update so App routes re-evaluate if needed
-      window.dispatchEvent(new Event("currentUserUpdated"));
-
       // Check role to determine redirection target as requested
       const userRole = loggedUser.role ? loggedUser.role.toLowerCase() : "";
       if (userRole === "teacher" || userRole === "admin") {
@@ -51,13 +48,13 @@ export default function LoginPage() {
     }
   };
 
-  const handleDevLogin = (email, password) => {
+  const handleDevLogin = async (email, password) => {
     setFormData({ email, password });
     setError("");
     
     try {
-      const loggedUser = usersService.login(email, password);
-      window.dispatchEvent(new Event("currentUserUpdated"));
+      const loggedUser = await usersService.login(email, password);
+      
       const userRole = loggedUser.role ? loggedUser.role.toLowerCase() : "";
       if (userRole === "teacher" || userRole === "admin") {
         navigate("/teacher");

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Plus, 
   ArrowRight, 
@@ -45,6 +45,7 @@ import { PROJECT_DATA, ACTIVE_CHALLENGES, STUDENT_PROJECTS } from "../data/chall
 import { CLASS_METRICS } from "../lib/analytics";
 import { createStudentProject, createDesignChallenge } from "../lib/dataModels";
 import { usersService } from "./usersService";
+import { apiService } from "../lib/apiService";
 
 const PHASE_MAP = {
   empathize: { label: "Empathize", icon: Users, color: "text-rose-400", bg: "bg-rose-400/10", border: "border-rose-400/20" },
@@ -58,54 +59,45 @@ const PHASE_MAP = {
 export default function Dashboard({ theme, toggleTheme }) {
   const navigate = useNavigate();
   const currentUser = usersService.getCurrentUser();
-  const isTeacher = currentUser?.role === 'teacher';
+  const isTeacher = currentUser?.role?.toLowerCase() === 'teacher';
 
   // Shared States
-  const [challenges, setChallenges] = useState(() => {
-    const stored = sessionStorage.getItem("challenges");
-    if (!stored) {
-      sessionStorage.setItem("challenges", JSON.stringify(ACTIVE_CHALLENGES));
-      return ACTIVE_CHALLENGES;
-    }
-    return JSON.parse(stored);
-  });
+  const [challenges, setChallenges] = useState([]);
+  const [studentProjects, setStudentProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Student States
-  const [studentProjects, setStudentProjects] = useState(() => {
-    if (isTeacher) {
-      const stored = sessionStorage.getItem("studentProjects");
-      if (!stored) {
-        sessionStorage.setItem("studentProjects", JSON.stringify(STUDENT_PROJECTS));
-        return STUDENT_PROJECTS;
-      }
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        const parsed = JSON.parse(stored);
-        const migrated = parsed.map((p, idx) => {
-          const template = STUDENT_PROJECTS.find(t => t.id.toString() === p.id.toString()) || {};
-          return {
-            ...p,
-            studentOrTeamName: p.studentOrTeamName || template.studentOrTeamName || `Team ${String.fromCharCode(65 + idx)}`,
-            title: p.title || p.projectTitle || template.title || "Untitled Project",
-            creativityScore: p.creativityScore || template.creativityScore || "Not Evaluated",
-            teamworkStatus: p.teamworkStatus || template.teamworkStatus || "Solo",
-            lastUpdated: p.lastUpdated || p.lastActiveDate || template.lastUpdated || "Just now"
-          };
-        });
-        sessionStorage.setItem("studentProjects", JSON.stringify(migrated));
-        return migrated;
-      } catch (e) {
-        sessionStorage.setItem("studentProjects", JSON.stringify(STUDENT_PROJECTS));
-        return STUDENT_PROJECTS;
+        setIsLoading(true);
+        const [fetchedChallenges, fetchedProjects] = await Promise.all([
+          apiService.getChallenges(),
+          apiService.getProjects(isTeacher ? undefined : currentUser?.id)
+        ]);
+        
+        // Normalize _id to id and name to title so we don't have to rewrite the entire UI template
+        const normalizedChallenges = (fetchedChallenges || []).map(c => ({ ...c, id: c._id || c.id }));
+        const normalizedProjects = (fetchedProjects || []).map(p => ({ 
+          ...p, 
+          id: p._id || p.id,
+          title: p.name || p.title || 'Untitled Project',
+          currentPhase: p.currentPhase?.toLowerCase() || 'empathize'
+        }));
+
+        setChallenges(normalizedChallenges);
+        setStudentProjects(normalizedProjects);
+      } catch (err) {
+        console.error("Failed to fetch dashboard data:", err);
+      } finally {
+        setIsLoading(false);
       }
+    };
+    if (currentUser) {
+      fetchData();
     } else {
-      const stored = sessionStorage.getItem("studentProjects");
-      if (!stored) {
-        sessionStorage.setItem("studentProjects", JSON.stringify(PROJECT_DATA));
-        return PROJECT_DATA;
-      }
-      return JSON.parse(stored);
+      setIsLoading(false);
     }
-  });
+  }, []);
 
   // Common Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -120,42 +112,64 @@ export default function Dashboard({ theme, toggleTheme }) {
   const [phaseFilter, setPhaseFilter] = useState("All");
 
   // Student Actions
-  const handleCreateStudentProject = () => {
-    if (!newTitle.trim()) return;
+  const handleCreateStudentProject = async () => {
+    if (!newTitle.trim() || !selectedChallengeId) return;
 
-    const studentName = currentUser ? currentUser.name : "Student";
-    const newProject = createStudentProject(newTitle.trim(), studentName, selectedChallengeId);
-    newProject.isRecent = true;
+    try {
+      const newProjectRaw = await apiService.createProject({
+        studentId: currentUser.id,
+        challengeId: selectedChallengeId,
+        name: newTitle.trim(),
+      });
 
-    const updatedProjects = studentProjects.map(p => ({ ...p, isRecent: false }));
-    updatedProjects.unshift(newProject);
+      // Map id, normalize name → title, and set local properties
+      const newProject = { 
+        ...newProjectRaw, 
+        id: newProjectRaw._id || newProjectRaw.id, 
+        title: newProjectRaw.name || newTitle.trim(),
+        currentPhase: newProjectRaw.currentPhase?.toLowerCase() || 'empathize',
+        isRecent: true 
+      };
 
-    sessionStorage.setItem("studentProjects", JSON.stringify(updatedProjects));
-    setStudentProjects(updatedProjects);
+      const updatedProjects = studentProjects.map(p => ({ ...p, isRecent: false }));
+      updatedProjects.unshift(newProject);
+      setStudentProjects(updatedProjects);
 
-    setNewTitle("");
-    setSelectedChallengeId("");
-    setIsModalOpen(false);
+      setNewTitle("");
+      setSelectedChallengeId("");
+      setIsModalOpen(false);
 
-    navigate(`/workspace/${newProject.id}`);
+      navigate(`/workspace/${newProject.id}`);
+    } catch (err) {
+      console.error("Failed to create project:", err);
+    }
   };
 
   // Teacher Actions
-  const handleSaveChallenge = () => {
+  const handleSaveChallenge = async () => {
     if (!newTitle.trim()) return;
-    const newChallenge = createDesignChallenge(newTitle.trim(), newDesc.trim());
-    const updated = [...challenges, newChallenge];
-    sessionStorage.setItem("challenges", JSON.stringify(updated));
-    setChallenges(updated);
-    
-    setNewTitle("");
-    setNewDesc("");
-    setIsModalOpen(false);
+    try {
+      const newChallengeRaw = await apiService.createChallenge({
+        title: newTitle.trim(),
+        description: newDesc.trim(),
+        createdByTeacherId: currentUser?.id
+      });
+      
+      const newChallenge = { ...newChallengeRaw, id: newChallengeRaw._id || newChallengeRaw.id };
+      setChallenges([...challenges, newChallenge]);
+      
+      setNewTitle("");
+      setNewDesc("");
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Failed to save challenge:", err);
+    }
   };
 
-  // Student Computed Values
-  const activeRecentProject = studentProjects.find(p => p.isRecent || p.lastUpdated === "Just now") || studentProjects[0];
-  const otherProjects = studentProjects.filter(p => p.id !== (activeRecentProject?.id));
+  // Student Computed Values — sort by lastUpdated descending, most recent first
+  const sortedProjects = [...studentProjects].sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
+  const activeRecentProject = sortedProjects[0] || null;
+  const otherProjects = sortedProjects.slice(1);
 
   // Teacher Computed Values
   const filteredTeacherProjects = studentProjects.filter(p => {
@@ -166,6 +180,13 @@ export default function Dashboard({ theme, toggleTheme }) {
     const matchesFilter = phaseFilter === "All" || p.currentPhase === phaseFilter;
     return matchesSearch && matchesFilter;
   });
+
+  const totalProjectsCount = studentProjects.length;
+  const avgCompletionValue = studentProjects.length 
+    ? Math.round(studentProjects.reduce((acc, p) => acc + (p.progressPercentage || 0), 0) / studentProjects.length) + "%" 
+    : "0%";
+  const needsReviewCount = studentProjects.filter(p => p.currentPhase === 'test' || p.creativityScore === 'Needs Focus').length;
+  const activeStudentsCount = new Set(studentProjects.map(p => p.studentId).filter(Boolean)).size;
 
   const renderStatusBadge = (value, type) => {
     let colorClass = "bg-zinc-800 text-zinc-300 border-zinc-700";
@@ -184,6 +205,17 @@ export default function Dashboard({ theme, toggleTheme }) {
       </Badge>
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center font-sans">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-zinc-500 font-medium animate-pulse">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-200 selection:bg-blue-500/30">
@@ -207,7 +239,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                   <Activity className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                 </CardHeader>
                 <CardContent className="px-6 pb-5">
-                  <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">{CLASS_METRICS.totalProjects}</div>
+                  <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">{totalProjectsCount}</div>
                 </CardContent>
               </Card>
               <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm">
@@ -216,7 +248,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                   <CheckCircle2 className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
                 </CardHeader>
                 <CardContent className="px-6 pb-5">
-                  <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">{CLASS_METRICS.avgCompletion}</div>
+                  <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">{avgCompletionValue}</div>
                 </CardContent>
               </Card>
               <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
@@ -226,7 +258,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                   <AlertCircle className="h-4 w-4 text-rose-500 dark:text-rose-400" />
                 </CardHeader>
                 <CardContent className="px-6 pb-5">
-                  <div className="text-3xl font-bold text-rose-500 dark:text-rose-400">{CLASS_METRICS.needsReview}</div>
+                  <div className="text-3xl font-bold text-rose-500 dark:text-rose-400">{needsReviewCount}</div>
                 </CardContent>
               </Card>
               <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm">
@@ -235,7 +267,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                   <UserCheck className="h-4 w-4 text-purple-500 dark:text-purple-400" />
                 </CardHeader>
                 <CardContent className="px-6 pb-5">
-                  <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">{CLASS_METRICS.activeStudents}</div>
+                  <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">{activeStudentsCount}</div>
                 </CardContent>
               </Card>
             </section>

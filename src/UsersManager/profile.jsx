@@ -59,7 +59,7 @@ export default function Profile({ theme, toggleTheme }) {
     setError("");
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       setError("Name cannot be empty.");
@@ -91,7 +91,7 @@ export default function Profile({ theme, toggleTheme }) {
         updatePayload.password = formData.password;
       }
 
-      usersService.updateUser(currentUser.email, updatePayload);
+      await usersService.updateUser(currentUser.id, updatePayload);
       setSuccess("Profile details updated successfully!");
       setIsEditMode(false);
       setError("");
@@ -122,7 +122,7 @@ export default function Profile({ theme, toggleTheme }) {
             size="sm" 
             className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8 cursor-pointer"
             onClick={() => {
-              if (currentUser.role === "teacher") {
+              if (currentUser.role?.toLowerCase() === "teacher") {
                 navigate("/teacher");
               } else {
                 navigate("/dashboard");
@@ -130,10 +130,10 @@ export default function Profile({ theme, toggleTheme }) {
             }}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            {currentUser.role === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
+            {currentUser.role?.toLowerCase() === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
           </Button>
         </div>
-        {currentUser.role === "teacher" && (
+        {currentUser.role?.toLowerCase() === "teacher" && (
           <Button 
             variant="outline" 
             size="sm" 

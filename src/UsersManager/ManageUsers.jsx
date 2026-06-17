@@ -15,20 +15,27 @@ export default function ManageUsers({ theme, toggleTheme }) {
   const [usersList, setUsersList] = useState([]);
   const [notification, setNotification] = useState({ message: "", type: "" });
 
-  const fetchUsersData = () => {
+  const fetchUsersData = async () => {
     // Auth Check
     const activeUser = usersService.getCurrentUser();
     if (!activeUser) {
       navigate("/login");
       return;
     }
-    if (activeUser.role !== "teacher") {
+    if (activeUser.role?.toLowerCase() !== "teacher") {
       // Direct unauthorized student away
       navigate("/dashboard");
       return;
     }
     setCurrentUser(activeUser);
-    setUsersList(usersService.getAllUsers());
+    
+    try {
+      const users = await usersService.getAllUsers();
+      const normalizedUsers = (users || []).map(u => ({ ...u, id: u._id || u.id }));
+      setUsersList(normalizedUsers);
+    } catch (err) {
+      showNotification("Failed to load users.", "error");
+    }
   };
 
   useEffect(() => {
@@ -52,25 +59,25 @@ export default function ManageUsers({ theme, toggleTheme }) {
     }, 3000);
   };
 
-  const handleRoleChange = (email, newRole) => {
+  const handleRoleChange = async (id, newRole) => {
     try {
-      usersService.changeUserRole(email, newRole);
-      setUsersList(usersService.getAllUsers());
+      await usersService.changeUserRole(id, newRole);
+      await fetchUsersData();
       showNotification(`Successfully changed user role to ${newRole}.`);
     } catch (err) {
       showNotification(err.message || "Failed to update user role.", "error");
     }
   };
 
-  const handleToggleBlock = (email) => {
+  const handleToggleBlock = async (id) => {
     try {
-      const updatedUser = usersService.toggleBlockUser(email);
-      setUsersList(usersService.getAllUsers());
+      const updatedUser = await usersService.toggleBlockUser(id);
+      await fetchUsersData();
       
       if (updatedUser.blocked) {
-        showNotification(`Blocked user ${email}.`, "warning");
+        showNotification(`Blocked user.`, "warning");
       } else {
-        showNotification(`Unblocked user ${email}.`, "success");
+        showNotification(`Unblocked user.`, "success");
       }
     } catch (err) {
       showNotification(err.message || "Failed to toggle block status.", "error");
@@ -114,9 +121,9 @@ export default function ManageUsers({ theme, toggleTheme }) {
           <Button 
             variant="outline" 
             size="icon" 
-            onClick={() => {
-              setUsersList(usersService.getAllUsers());
-              showNotification("Users list reloaded from sessionStorage.");
+            onClick={async () => {
+              await fetchUsersData();
+              showNotification("Users list reloaded from database.");
             }}
             className="border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400 cursor-pointer h-9 w-9 rounded-lg"
             title="Reload database"
@@ -197,12 +204,12 @@ export default function ManageUsers({ theme, toggleTheme }) {
                       <td className="px-6 py-4">
                         <select
                           value={user.role}
-                          onChange={(e) => handleRoleChange(user.email, e.target.value)}
-                          disabled={user.email.toLowerCase() === currentUser.email.toLowerCase()} // Prevent self role downgrading
+                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                          disabled={user.id === currentUser.id} // Prevent self role downgrading
                           className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-semibold px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500 cursor-pointer disabled:cursor-not-allowed text-zinc-700 dark:text-zinc-300"
                         >
-                          <option value="student">Student</option>
-                          <option value="teacher">Teacher</option>
+                          <option value="Student">Student</option>
+                          <option value="Teacher">Teacher</option>
                         </select>
                       </td>
 
@@ -224,8 +231,8 @@ export default function ManageUsers({ theme, toggleTheme }) {
                         <Button
                           variant={user.blocked ? "outline" : "destructive"}
                           size="sm"
-                          disabled={user.email.toLowerCase() === currentUser.email.toLowerCase()} // Prevent blocking oneself
-                          onClick={() => handleToggleBlock(user.email)}
+                          disabled={user.id === currentUser.id} // Prevent blocking oneself
+                          onClick={() => handleToggleBlock(user.id)}
                           className={`text-xs font-semibold px-3 h-8 cursor-pointer ${
                             user.blocked 
                               ? "border-zinc-200 dark:border-zinc-750 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300" 

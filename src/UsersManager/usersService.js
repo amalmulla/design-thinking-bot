@@ -1,186 +1,123 @@
 // usersService.js
-// Service to manage users state persisted in sessionStorage
-import { createUser } from "../lib/dataModels";
-
-const INITIAL_USERS = [
-  {
-    id: "1",
-    name: "Jane Student",
-    email: "student@example.com",
-    password: "password",
-    role: "student",
-    blocked: false
-  },
-  {
-    id: "2",
-    name: "Dr. Sarah Teacher",
-    email: "teacher@example.com",
-    password: "password",
-    role: "teacher",
-    blocked: false
-  }
-];
-
-// Helper to load users from sessionStorage
-function loadUsers() {
-  const stored = sessionStorage.getItem("users");
-  if (!stored) {
-    sessionStorage.setItem("users", JSON.stringify(INITIAL_USERS));
-    return INITIAL_USERS;
-  }
-  try {
-    return JSON.parse(stored);
-  } catch (e) {
-    console.error("Error parsing users from sessionStorage:", e);
-    return INITIAL_USERS;
-  }
-}
-
-// Helper to save users to sessionStorage
-function saveUsers(users) {
-  sessionStorage.setItem("users", JSON.stringify(users));
-}
-
-// Initialize users database on file load
-loadUsers();
+// Service to manage users state and API delegation
+import { apiService } from "../lib/apiService";
 
 export const usersService = {
-  // Get all users (sensitive fields like password should be omitted or masked in views, not service)
-  getAllUsers() {
-    return loadUsers();
+  // Get all users
+  async getAllUsers() {
+    try {
+      return await apiService.getAllUsers();
+    } catch (error) {
+      console.error("Error fetching all users:", error);
+      throw error;
+    }
   },
 
-  // Get currently logged-in user
+  // Get currently logged-in user from the stored JWT
   getCurrentUser() {
-    const userJson = sessionStorage.getItem("currentUser");
-    if (!userJson) return null;
+    const token = sessionStorage.getItem("token");
+    if (!token) return null;
     try {
-      return JSON.parse(userJson);
+      // Safely decode the JWT payload
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      return JSON.parse(jsonPayload);
     } catch (e) {
+      console.error("Error decoding JWT token:", e);
       return null;
     }
   },
 
   // Perform login check
-  login(email, password) {
-    const users = loadUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-    if (!user) {
-      throw new Error("Invalid email or password.");
+  async login(email, password) {
+    try {
+      const response = await apiService.login(email, password);
+      // Strip the returned JWT token and save ONLY the token string to browser memory
+      sessionStorage.setItem("token", response.token);
+      
+      window.dispatchEvent(new Event("currentUserUpdated"));
+      
+      return this.getCurrentUser();
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw error;
     }
-
-    if (user.password !== password) {
-      throw new Error("Invalid email or password.");
-    }
-
-    if (user.blocked) {
-      throw new Error("Your account has been blocked by an administrator.");
-    }
-
-    // Set current user session (do not store plaintext password in active session state for safety)
-    const sessionUser = { ...user };
-    delete sessionUser.password;
-    sessionStorage.setItem("currentUser", JSON.stringify(sessionUser));
-    return sessionUser;
   },
 
   // Register a new user
-  register({ name, email, password, role }) {
-    if (!name || !email || !password || !role) {
-      throw new Error("All fields are required.");
+  async register(userData) {
+    try {
+      const response = await apiService.register(userData);
+      return response.user;
+    } catch (error) {
+      console.error("Registration failed:", error);
+      throw error;
     }
-
-    const users = loadUsers();
-    const exists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
-
-    if (exists) {
-      throw new Error("An account with this email already exists.");
-    }
-
-    const newUser = createUser(name, email, password, role);
-
-    users.push(newUser);
-    saveUsers(users);
-
-    return newUser;
-  },
-
-  // Update details of a user
-  updateUser(email, updatedData) {
-    const users = loadUsers();
-    const index = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
-
-    if (index === -1) {
-      throw new Error("User not found.");
-    }
-
-    // Update in database
-    users[index] = { ...users[index], ...updatedData };
-    saveUsers(users);
-
-    // If updating the active user session, update sessionStorage "currentUser"
-    const currentUser = this.getCurrentUser();
-    if (currentUser && currentUser.email.toLowerCase() === email.toLowerCase()) {
-      const updatedSessionUser = { ...currentUser, ...updatedData };
-      delete updatedSessionUser.password;
-      sessionStorage.setItem("currentUser", JSON.stringify(updatedSessionUser));
-      
-      // Dispatch a storage event or custom event so App components know state changed
-      window.dispatchEvent(new Event("currentUserUpdated"));
-    }
-
-    return users[index];
   },
 
   // Toggle user blocked state
-  toggleBlockUser(email) {
-    const users = loadUsers();
-    const index = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
-
-    if (index === -1) {
-      throw new Error("User not found.");
+  async toggleBlockUser(id) {
+    try {
+      const response = await apiService.toggleBlockUser(id);
+      
+      // If currently logged-in user is blocked, force log them out
+      const currentUser = this.getCurrentUser();
+      if (currentUser && currentUser.id === id && response.user.blocked) {
+        this.logout();
+        window.dispatchEvent(new Event("currentUserBlocked"));
+      }
+      
+      return response.user;
+    } catch (error) {
+      console.error("Error toggling block user:", error);
+      throw error;
     }
-
-    const isBlocked = !users[index].blocked;
-    users[index].blocked = isBlocked;
-    saveUsers(users);
-
-    // If currently logged-in user is blocked, force log them out!
-    const currentUser = this.getCurrentUser();
-    if (currentUser && currentUser.email.toLowerCase() === email.toLowerCase() && isBlocked) {
-      this.logout();
-      window.dispatchEvent(new Event("currentUserBlocked"));
-    }
-
-    return users[index];
   },
 
   // Change user role
-  changeUserRole(email, newRole) {
-    const users = loadUsers();
-    const index = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+  async changeUserRole(id, newRole) {
+    try {
+      const response = await apiService.updateUserRole(id, newRole);
+      
+      // If updating active user role, they may need to re-login to get a new JWT,
+      // but we signal an update event just in case.
+      const currentUser = this.getCurrentUser();
+      if (currentUser && currentUser.id === id) {
+        window.dispatchEvent(new Event("currentUserUpdated"));
+      }
 
-    if (index === -1) {
-      throw new Error("User not found.");
+      return response.user;
+    } catch (error) {
+      console.error("Error changing user role:", error);
+      throw error;
     }
+  },
 
-    users[index].role = newRole;
-    saveUsers(users);
+  // Update user profile (name, password)
+  async updateUser(id, updatePayload) {
+    try {
+      const response = await apiService.updateUserProfile(id, updatePayload);
+      
+      // Update the local token so the header and profile page reflect the new name
+      if (response.token) {
+        sessionStorage.setItem("token", response.token);
+        window.dispatchEvent(new Event("currentUserUpdated"));
+      }
 
-    // If updating active user role, sync
-    const currentUser = this.getCurrentUser();
-    if (currentUser && currentUser.email.toLowerCase() === email.toLowerCase()) {
-      const updatedSessionUser = { ...currentUser, role: newRole };
-      sessionStorage.setItem("currentUser", JSON.stringify(updatedSessionUser));
-      window.dispatchEvent(new Event("currentUserUpdated"));
+      return response.user;
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      throw error;
     }
-
-    return users[index];
   },
 
   // Clear current login session
   logout() {
-    sessionStorage.removeItem("currentUser");
+    sessionStorage.removeItem("token");
+    window.dispatchEvent(new Event("currentUserUpdated"));
   }
 };

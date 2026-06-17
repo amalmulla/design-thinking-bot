@@ -42,7 +42,7 @@ export default function Register() {
     return null;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationError = validateForm();
     if (validationError) {
@@ -51,11 +51,11 @@ export default function Register() {
     }
 
     try {
-      usersService.register({
+      await usersService.register({
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
-        role: role,
+        role: role === "teacher" ? "Teacher" : "Student",
       });
 
       setSuccess("Account created successfully! Redirecting to login...");
