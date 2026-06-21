@@ -33,8 +33,8 @@ export default function POVDefineCanvas({
               value={needsVal}
               onChange={(e) => onUpdate && onUpdate("needs", e.target.value)}
               disabled={isReadOnly} 
-              className="bg-white dark:bg-zinc-955 border-zinc-200 dark:border-zinc-800 text-zinc-850 dark:text-zinc-100 focus-visible:ring-zinc-300 dark:focus-visible:ring-zinc-700" 
-              placeholder="e.g., Needs a quick way to recycle..." 
+              className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-850 dark:text-zinc-100 focus-visible:ring-zinc-300 dark:focus-visible:ring-zinc-700"
+              placeholder="e.g., Needs a quick way to recycle..."
             />
           </div>
           <div className="space-y-2">

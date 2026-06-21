@@ -11,13 +11,4 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
-  server: {
-    proxy: {
-      '/api-cerebras': {
-        target: 'https://api.cerebras.ai',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api-cerebras/, ''),
-      },
-    },
-  },
 })

@@ -171,7 +171,7 @@ export default function Register() {
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange}
-                    className="bg-white dark:bg-zinc-955 border-zinc-200 dark:border-zinc-800 focus-visible:ring-violet-500 focus-visible:border-violet-500 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 h-11 rounded-lg pr-10"
+                    className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 focus-visible:ring-violet-500 focus-visible:border-violet-500 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 h-11 rounded-lg pr-10"
                   />
                   <button
                     type="button"
