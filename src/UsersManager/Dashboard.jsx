@@ -172,6 +172,13 @@ export default function Dashboard({ theme, toggleTheme }) {
   const otherProjects = sortedProjects.slice(1);
 
   // Teacher Computed Values
+  // Lookup of challenge id -> title, so the projects table can show which challenge each project belongs to
+  const challengeTitleById = React.useMemo(() => {
+    const map = {};
+    challenges.forEach(c => { map[c.id] = c.title; });
+    return map;
+  }, [challenges]);
+
   const filteredTeacherProjects = studentProjects.filter(p => {
     const nameToMatch = p.studentOrTeamName || "";
     const titleToMatch = p.projectTitle || p.title || "";
@@ -361,7 +368,8 @@ export default function Dashboard({ theme, toggleTheme }) {
                   <TableHeader className="bg-zinc-50/75 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
                     <TableRow className="hover:bg-transparent">
                       <TableHead className="text-zinc-500 font-medium">Student / Team</TableHead>
-                      <TableHead className="text-zinc-500 font-medium w-[25%]">Project Title</TableHead>
+                      <TableHead className="text-zinc-500 font-medium w-[20%]">Project Title</TableHead>
+                      <TableHead className="text-zinc-500 font-medium w-[18%]">Challenge</TableHead>
                       <TableHead className="text-zinc-500 font-medium">Phase</TableHead>
                       <TableHead className="text-zinc-500 font-medium">AI Creativity</TableHead>
                       <TableHead className="text-zinc-500 font-medium">Teamwork</TableHead>
@@ -372,7 +380,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                   <TableBody>
                     {filteredTeacherProjects.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10 text-zinc-500">No projects found.</TableCell>
+                        <TableCell colSpan={8} className="text-center py-10 text-zinc-500">No projects found.</TableCell>
                       </TableRow>
                     ) : (
                       filteredTeacherProjects.map((project) => {
@@ -383,6 +391,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                           <TableRow key={project.id} className="border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30">
                             <TableCell className="font-medium text-zinc-800 dark:text-zinc-200">{project.studentOrTeamName || "Student"}</TableCell>
                             <TableCell className="text-zinc-700 dark:text-zinc-300 font-medium">{project.title || project.projectTitle || "Untitled Project"}</TableCell>
+                            <TableCell className="text-zinc-600 dark:text-zinc-400 text-sm">{challengeTitleById[project.challengeId] || <span className="text-zinc-400 dark:text-zinc-600 italic">Unassigned</span>}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <div className={`p-1.5 rounded-md ${PhaseData.bg}`}>
