@@ -13,6 +13,7 @@ import { apiService } from "../lib/apiService";
 import { getRandomPrompt } from "../components/ChatBot/socraticQuestions";
 import { createChatMessage } from "../lib/dataModels";
 import { getSocraticChatCompletion } from "../lib/aiService";
+import { exportChatAsMarkdown } from "../lib/chatExport";
 
 // Modular Workspace Components
 import PhaseStepper from "../components/ProgressTracker/PhaseStepper";
@@ -145,6 +146,12 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     } finally {
       setIsAiTyping(false);
     }
+  };
+
+  // Export the current project's chat conversation as a downloadable Markdown file
+  const handleExportChat = () => {
+    if (!activeProject) return;
+    exportChatAsMarkdown({ ...activeProject, messages });
   };
 
   // Safe canvas data resolution
@@ -402,6 +409,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               currentPhase={currentPhase}
               isReadOnly={isReadOnly}
               isAiTyping={isAiTyping}
+              onExportChat={handleExportChat}
+              canExportChat={isReadOnly}
             />
 
             {/* PANEL 3: PHASE DELIVERABLES CANVAS (Right Column, 50%) */}
