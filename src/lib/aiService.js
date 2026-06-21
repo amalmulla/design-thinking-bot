@@ -1,5 +1,9 @@
 import { SOCRATIC_PROMPTS, getRandomPrompt } from "../components/ChatBot/socraticQuestions";
 
+// Base URL of the backend API; the AI request is proxied through it so the Cerebras
+// key stays server-side and is never exposed to the browser.
+const API_URL = import.meta.env.VITE_API_URL;
+
 // Ordered Design Thinking phases, used to tell the AI which phase comes next.
 const PHASE_ORDER = ["empathize", "define", "ideate", "prototype", "test"];
 
@@ -82,8 +86,8 @@ function summarizeCanvasForPhase(phase, canvasData = {}) {
 }
 
 /**
- * Gets Socratic chat completions from Cerebras API, tailored to the current design phase.
- * If VITE_API_KEY is not configured, automatically runs a simulated local Socratic prompt response.
+ * Gets Socratic chat completions via the backend AI proxy, tailored to the current design phase.
+ * If the server has no Cerebras key (or the request fails), it falls back to a simulated local prompt.
  *
  * @param {Array<Object>} messages - Full chat conversation history
  * @param {string} phase - Active student Design Thinking phase ('empathize', 'define', 'ideate', 'prototype', 'test')
@@ -91,22 +95,6 @@ function summarizeCanvasForPhase(phase, canvasData = {}) {
  * @returns {Promise<string>} Socratic markdown output text
  */
 export async function getSocraticChatCompletion(messages, phase, canvasData = {}) {
-  const apiKey = import.meta.env.VITE_API_KEY ? import.meta.env.VITE_API_KEY.trim() : "";
-  // Check if the key is not empty, is not one of the placeholder strings, and has a reasonable length
-  const isKeyValid = apiKey &&
-    apiKey !== "just test for now" &&
-    apiKey !== "put api key here" &&
-    !apiKey.toLowerCase().includes("placeholder") &&
-    !apiKey.toLowerCase().includes("put api key") &&
-    apiKey.length > 10;
-
-  if (!isKeyValid) {
-    console.warn("[Socratic AI] VITE_API_KEY is unconfigured, placeholder, or invalid. Running in simulated fallback mode.");
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    return getRandomPrompt(phase);
-  }
-
   try {
     // Retrieve custom Socratic prompts based on stage
     const samplePrompts = SOCRATIC_PROMPTS[phase] || SOCRATIC_PROMPTS["empathize"];
@@ -167,12 +155,13 @@ ${advanceText}`
     }
     formattedMessages.push(...history);
 
-    // Call the local Vite proxy to bypass CORS
-    const response = await fetch("/api-cerebras/v1/chat/completions", {
+    // Call the backend AI proxy, which adds the Cerebras key server-side and forwards the request.
+    const token = sessionStorage.getItem("token");
+    const response = await fetch(`${API_URL}/api/ai/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: JSON.stringify({
         model: "gpt-oss-120b",
@@ -183,17 +172,17 @@ ${advanceText}`
 
     if (!response.ok) {
       const errorData = await response.text();
-      throw new Error(`Cerebras API returned status ${response.status}: ${errorData}`);
+      throw new Error(`AI proxy returned status ${response.status}: ${errorData}`);
     }
 
     const data = await response.json();
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      return data.choices[0].message.content;
+    if (data.content) {
+      return data.content;
     } else {
-      throw new Error("Invalid response format from Cerebras API");
+      throw new Error("Invalid response format from AI proxy");
     }
   } catch (error) {
-    console.error("[Socratic AI] Live Cerebras API communication failed:", error);
+    console.error("[Socratic AI] Live AI request failed:", error);
     console.warn("[Socratic AI] Gracefully falling back to simulated Socratic response.");
 
     // Fall back to high-quality simulated prompts to ensure a premium, crash-free student experience
