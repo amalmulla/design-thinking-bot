@@ -130,7 +130,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     // Trigger live GenAI chat
     setIsAiTyping(true);
     try {
-      const aiResponseText = await getSocraticChatCompletion(newMessages, currentPhase);
+      const aiResponseText = await getSocraticChatCompletion(newMessages, currentPhase, activeProject?.canvasData || {});
       const aiMsg = createChatMessage("ai", aiResponseText);
       const finalMessages = [...newMessages, aiMsg];
       
