@@ -15,7 +15,8 @@ import {
   Search,
   Filter,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  GraduationCap
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -70,15 +71,19 @@ export default function Dashboard({ theme, toggleTheme }) {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [fetchedChallenges, fetchedProjects] = await Promise.all([
-          apiService.getChallenges(),
-          apiService.getProjects(isTeacher ? undefined : currentUser?.id)
+
+        // Teachers see only their own challenges + their own students' projects.
+        // Students see their own projects + the list of teachers to pick from.
+        const [fetchedChallenges, fetchedProjects, fetchedTeachers] = await Promise.all([
+          isTeacher ? apiService.getChallenges(currentUser?.id) : Promise.resolve([]),
+          isTeacher ? apiService.getProjectsByTeacher(currentUser?.id) : apiService.getProjects(currentUser?.id),
+          isTeacher ? Promise.resolve([]) : apiService.getTeachers()
         ]);
-        
+
         // Normalize _id to id and name to title so we don't have to rewrite the entire UI template
         const normalizedChallenges = (fetchedChallenges || []).map(c => ({ ...c, id: c._id || c.id }));
-        const normalizedProjects = (fetchedProjects || []).map(p => ({ 
-          ...p, 
+        const normalizedProjects = (fetchedProjects || []).map(p => ({
+          ...p,
           id: p._id || p.id,
           title: p.name || p.title || 'Untitled Project',
           currentPhase: p.currentPhase?.toLowerCase() || 'empathize'
@@ -86,6 +91,7 @@ export default function Dashboard({ theme, toggleTheme }) {
 
         setChallenges(normalizedChallenges);
         setStudentProjects(normalizedProjects);
+        setTeachers(fetchedTeachers || []);
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
       } finally {
@@ -105,6 +111,10 @@ export default function Dashboard({ theme, toggleTheme }) {
   // Student Modal Inputs
   const [newTitle, setNewTitle] = useState("");
   const [selectedChallengeId, setSelectedChallengeId] = useState("");
+  // Student picks a teacher first, then one of that teacher's challenges
+  const [teachers, setTeachers] = useState([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState("");
+  const [teacherChallenges, setTeacherChallenges] = useState([]);
 
   // Teacher Modal Inputs & States
   const [newDesc, setNewDesc] = useState("");
@@ -112,6 +122,28 @@ export default function Dashboard({ theme, toggleTheme }) {
   const [phaseFilter, setPhaseFilter] = useState("All");
 
   // Student Actions
+  // When a student picks a teacher, load only that teacher's challenges into the picker.
+  const handleSelectTeacher = async (teacherId) => {
+    setSelectedTeacherId(teacherId);
+    setSelectedChallengeId("");
+    setTeacherChallenges([]);
+    if (!teacherId) return;
+    try {
+      const fetched = await apiService.getChallenges(teacherId);
+      setTeacherChallenges((fetched || []).map(c => ({ ...c, id: c._id || c.id })));
+    } catch (err) {
+      console.error("Failed to load teacher's challenges:", err);
+    }
+  };
+
+  const resetProjectModal = () => {
+    setNewTitle("");
+    setSelectedChallengeId("");
+    setSelectedTeacherId("");
+    setTeacherChallenges([]);
+    setIsModalOpen(false);
+  };
+
   const handleCreateStudentProject = async () => {
     if (!newTitle.trim() || !selectedChallengeId) return;
 
@@ -122,22 +154,26 @@ export default function Dashboard({ theme, toggleTheme }) {
         name: newTitle.trim(),
       });
 
+      // Resolve teacher/challenge labels locally so the new card shows them immediately
+      const selectedTeacher = teachers.find(t => t.id?.toString() === selectedTeacherId?.toString());
+      const selectedChallenge = teacherChallenges.find(c => c.id?.toString() === selectedChallengeId?.toString());
+
       // Map id, normalize name → title, and set local properties
-      const newProject = { 
-        ...newProjectRaw, 
-        id: newProjectRaw._id || newProjectRaw.id, 
+      const newProject = {
+        ...newProjectRaw,
+        id: newProjectRaw._id || newProjectRaw.id,
         title: newProjectRaw.name || newTitle.trim(),
         currentPhase: newProjectRaw.currentPhase?.toLowerCase() || 'empathize',
-        isRecent: true 
+        teacherName: selectedTeacher?.name || null,
+        challengeTitle: selectedChallenge?.title || null,
+        isRecent: true
       };
 
       const updatedProjects = studentProjects.map(p => ({ ...p, isRecent: false }));
       updatedProjects.unshift(newProject);
       setStudentProjects(updatedProjects);
 
-      setNewTitle("");
-      setSelectedChallengeId("");
-      setIsModalOpen(false);
+      resetProjectModal();
 
       navigate(`/workspace/${newProject.id}`);
     } catch (err) {
@@ -450,7 +486,14 @@ export default function Dashboard({ theme, toggleTheme }) {
                         <Clock className="h-3.5 w-3.5" />
                         Last updated {activeRecentProject.lastUpdated}
                       </div>
-                      
+
+                      {activeRecentProject.teacherName && (
+                        <div className="flex items-center text-xs text-zinc-500 mb-2 gap-1.5">
+                          <GraduationCap className="h-3.5 w-3.5" />
+                          Teacher: {activeRecentProject.teacherName}
+                        </div>
+                      )}
+
                       <h3 className="text-2xl font-bold text-zinc-800 dark:text-zinc-100 mb-6 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {activeRecentProject.title}
                       </h3>
@@ -486,7 +529,7 @@ export default function Dashboard({ theme, toggleTheme }) {
             <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4 max-w-6xl mx-auto">
               <h2 className="text-xl font-semibold text-zinc-800 dark:text-zinc-100">My Portfolio</h2>
               <Button 
-                onClick={() => { if (challenges.length > 0) { setSelectedChallengeId(challenges[0].id.toString()); } setIsModalOpen(true); }}
+                onClick={() => setIsModalOpen(true)}
                 size="sm" 
                 className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm font-medium transition-colors cursor-pointer"
               >
@@ -523,6 +566,13 @@ export default function Dashboard({ theme, toggleTheme }) {
                           {PhaseData.label}
                         </Badge>
                       </div>
+
+                      {project.teacherName && (
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                          <GraduationCap className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{project.teacherName}</span>
+                        </div>
+                      )}
                       
                       <div className="space-y-1.5 pt-2">
                         <div className="flex justify-between text-xs">
@@ -549,7 +599,7 @@ export default function Dashboard({ theme, toggleTheme }) {
               })}
 
               <Card 
-                onClick={() => { if (challenges.length > 0) { setSelectedChallengeId(challenges[0].id.toString()); } setIsModalOpen(true); }}
+                onClick={() => setIsModalOpen(true)}
                 className="bg-transparent border-2 border-dashed border-zinc-300 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900/30 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[220px] group"
               >
                 <div className="h-12 w-12 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center mb-3">
@@ -597,35 +647,61 @@ export default function Dashboard({ theme, toggleTheme }) {
                   />
                 </div>
               ) : (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Select Active Design Challenge</label>
-                  {challenges.length === 0 ? (
-                    <p className="text-xs text-rose-500 font-semibold select-none">No active challenges available. Please contact your teacher.</p>
-                  ) : (
-                    <select
-                      value={selectedChallengeId}
-                      onChange={(e) => setSelectedChallengeId(e.target.value)}
-                      className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                    >
-                      {challenges.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.title}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
+                <>
+                  {/* Step 1: pick a teacher */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Select Teacher</label>
+                    {teachers.length === 0 ? (
+                      <p className="text-xs text-rose-500 font-semibold select-none">No teachers available yet. Please check back later.</p>
+                    ) : (
+                      <select
+                        value={selectedTeacherId}
+                        onChange={(e) => handleSelectTeacher(e.target.value)}
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                      >
+                        <option value="">— Choose a teacher —</option>
+                        {teachers.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Step 2: pick one of that teacher's challenges */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Select Design Challenge</label>
+                    {!selectedTeacherId ? (
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500 italic select-none">Choose a teacher first to see their challenges.</p>
+                    ) : teacherChallenges.length === 0 ? (
+                      <p className="text-xs text-rose-500 font-semibold select-none">This teacher has no active challenges yet.</p>
+                    ) : (
+                      <select
+                        value={selectedChallengeId}
+                        onChange={(e) => setSelectedChallengeId(e.target.value)}
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                      >
+                        <option value="">— Choose a challenge —</option>
+                        {teacherChallenges.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.title}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </>
               )}
             </div>
 
             <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex justify-end gap-3">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => {
-                  setNewTitle("");
                   setNewDesc("");
-                  setIsModalOpen(false);
-                }} 
+                  resetProjectModal();
+                }}
                 className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 h-9"
               >
                 Cancel

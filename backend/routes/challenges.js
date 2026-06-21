@@ -5,7 +5,9 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const challenges = await Challenge.find({});
+    const { teacherId } = req.query;
+    const filter = teacherId ? { createdByTeacherId: teacherId } : {};
+    const challenges = await Challenge.find(filter);
     res.status(200).json(challenges);
   } catch (error) {
     console.error('Error fetching challenges:', error);

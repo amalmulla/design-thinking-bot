@@ -50,8 +50,10 @@ export default function WorkspacePage({ theme, toggleTheme }) {
         const currentUser = usersService.getCurrentUser();
         const isTeacher = currentUser?.role?.toLowerCase() === 'teacher';
 
-        // Load side panel projects
-        const allProjects = await apiService.getProjects(isTeacher ? undefined : currentUser?.id);
+        // Load side panel projects (teachers see only their own students' projects)
+        const allProjects = isTeacher
+          ? await apiService.getProjectsByTeacher(currentUser?.id)
+          : await apiService.getProjects(currentUser?.id);
         const normalizedProjects = (allProjects || []).map(p => ({ 
           ...p, 
           id: p._id || p.id, 
