@@ -15,6 +15,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Minimal public list of teachers (id + name only) for the student's project-creation picker.
+router.get('/teachers', async (req, res) => {
+  try {
+    const teachers = await User.find({ role: 'Teacher', blocked: { $ne: true } }, 'name');
+    res.status(200).json(teachers.map((t) => ({ id: t._id, name: t.name })));
+  } catch (error) {
+    console.error('Error fetching teachers:', error);
+    res.status(500).json({ message: 'Server error fetching teachers' });
+  }
+});
+
 router.put('/:id/block', async (req, res) => {
   try {
     const { id } = req.params;

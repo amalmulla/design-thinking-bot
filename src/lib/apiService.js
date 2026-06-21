@@ -44,6 +44,7 @@ export const apiService = {
 
   // Projects
   getProjects: (studentId) => fetchApi(studentId ? `/api/projects?studentId=${studentId}` : '/api/projects'),
+  getProjectsByTeacher: (teacherId) => fetchApi(`/api/projects?teacherId=${teacherId}`),
   getProjectById: (id) => fetchApi(`/api/projects/${id}`),
   createProject: (projectData) => fetchApi('/api/projects', {
     method: 'POST',
@@ -55,7 +56,7 @@ export const apiService = {
   }),
 
   // Challenges
-  getChallenges: () => fetchApi('/api/challenges'),
+  getChallenges: (teacherId) => fetchApi(teacherId ? `/api/challenges?teacherId=${teacherId}` : '/api/challenges'),
   createChallenge: (challengeData) => fetchApi('/api/challenges', {
     method: 'POST',
     body: JSON.stringify(challengeData),
@@ -67,6 +68,7 @@ export const apiService = {
 
   // Users Management
   getAllUsers: () => fetchApi('/api/users'),
+  getTeachers: () => fetchApi('/api/users/teachers'),
   toggleBlockUser: (id, isBlocked) => fetchApi(`/api/users/${id}/block`, {
     method: 'PUT',
     body: JSON.stringify({ isBlocked }),
