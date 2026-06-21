@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { Bot, MessageSquare, Paperclip, Send } from "lucide-react";
+import { Bot, MessageSquare, Paperclip, Send, Download } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -100,7 +100,9 @@ export default function ChatPanel({
   handleSendMessage,
   currentPhase,
   isReadOnly,
-  isAiTyping = false
+  isAiTyping = false,
+  onExportChat,
+  canExportChat = false
 }) {
   const scrollRef = useRef(null);
 
@@ -116,11 +118,25 @@ export default function ChatPanel({
   return (
     <section className="w-1/2 flex flex-col border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 relative">
       {/* Chat Header */}
-      <div className="h-12 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center px-4 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
+      <div className="h-12 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center justify-between px-4 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Socratic Guide</span>
         </div>
+        {canExportChat && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onExportChat}
+            disabled={!messages || messages.length === 0}
+            title={messages && messages.length > 0 ? "Export this conversation as Markdown" : "No conversation to export"}
+            className="h-7 text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 border border-zinc-200 dark:border-zinc-800 rounded gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export Chat
+          </Button>
+        )}
       </div>
 
       {/* Chat History Viewport */}
