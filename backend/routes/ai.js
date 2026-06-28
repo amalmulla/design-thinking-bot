@@ -1,23 +1,7 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
-
-// Lightweight JWT auth so the AI proxy (and the paid API key behind it) can't be
-// used by anonymous traffic once the app is public.
-function requireAuth(req, res, next) {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) {
-    return res.status(401).json({ message: 'Authentication required.' });
-  }
-  try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: 'Invalid or expired token.' });
-  }
-}
 
 const CEREBRAS_URL = 'https://api.cerebras.ai/v1/chat/completions';
 

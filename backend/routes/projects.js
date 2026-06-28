@@ -3,8 +3,13 @@ const mongoose = require('mongoose');
 const Project = require('../models/Project');
 const Challenge = require('../models/Challenge');
 const User = require('../models/User');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Project data is per-student work; require a valid session for every project route
+// so it can't be read or mutated by anonymous traffic once the app is public.
+router.use(requireAuth);
 
 // Keep only strings that are valid Mongo ObjectIds, so $in queries never throw on
 // legacy/seed values like "teacher_seed_id".
