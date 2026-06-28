@@ -122,11 +122,15 @@ router.put('/:id', async (req, res) => {
     }
 
     if (name !== undefined) project.name = name;
-    if (currentPhase !== undefined) project.currentPhase = currentPhase;
+    if (currentPhase !== undefined) project.currentPhase = currentPhase.toLowerCase();
     if (unlockedPhases !== undefined) project.unlockedPhases = unlockedPhases;
     if (progressPercentage !== undefined) project.progressPercentage = progressPercentage;
     // Direct assignment (not spread) to ensure full canvasData is always saved cleanly
-    if (canvasData !== undefined) project.canvasData = canvasData;
+    if (canvasData !== undefined) {
+      console.log('Saving canvasData:', JSON.stringify(canvasData).substring(0, 200));
+      project.canvasData = canvasData;
+      project.markModified('canvasData');
+    }
     
     if (messages) {
       project.messages = messages;

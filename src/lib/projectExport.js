@@ -45,17 +45,28 @@ export function exportProjectMarkdown(project, includeChat, includeCanvases) {
   if (includeCanvases && project.canvasData) {
     md += `## Canvases\n\n`;
     for (const [phase, data] of Object.entries(project.canvasData)) {
-      md += `### Phase: ${phase.toUpperCase()}\n\n`;
-      if (typeof data === 'object') {
+      const displayPhase = phase === 'prototypeData' ? 'PROTOTYPE' : phase.toUpperCase();
+      md += `### Phase: ${displayPhase}\n\n`;
+      if (Array.isArray(data)) {
+        data.forEach(item => {
+          let text = item.text || item.name || item;
+          if (typeof text === 'string') text = text.replace(/<br\s*\/?>/gi, '\n  ');
+          let desc = item.description ? `\n  *Description:* ${item.description}` : '';
+          let link = item.url && item.url !== '#' ? ` (${item.url})` : '';
+          md += `- ${text}${link}${desc}\n`;
+        });
+        md += `\n`;
+      } else if (typeof data === 'object') {
         for (const [key, val] of Object.entries(data)) {
           md += `#### ${key.toUpperCase()}\n`;
           if (Array.isArray(val)) {
             val.forEach(item => {
-              if (item.text) md += `- ${item.text}\n`;
-              else md += `- ${item}\n`;
+              let text = item.text || item.name || item;
+              if (typeof text === 'string') text = text.replace(/<br\s*\/?>/gi, '\n  ');
+              md += `- ${text}\n`;
             });
           } else if (typeof val === 'string') {
-            md += `${val}\n`;
+            md += `${val.replace(/<br\s*\/?>/gi, '\n  ')}\n`;
           } else {
             md += `${JSON.stringify(val)}\n`;
           }
@@ -75,6 +86,9 @@ export function exportProjectMarkdown(project, includeChat, includeCanvases) {
         const speaker = msg.role === 'ai' ? 'Design AI' : 'Student';
         const time = msg.timestamp ? ` — ${msg.timestamp}` : '';
         md += `**${speaker}${time}**\n\n${msg.content}\n\n`;
+        if (msg.unlockedPhase) {
+          md += `> 🏆 **Achievement Unlocked:** The student successfully unlocked the **${msg.unlockedPhase.toUpperCase()}** phase!\n\n`;
+        }
       });
     }
   }
@@ -107,19 +121,47 @@ export function exportProjectPDF(project, includeChat, includeCanvases) {
     for (const [phase, data] of Object.entries(project.canvasData)) {
       if (yPos > 270) { doc.addPage(); yPos = 20; }
       
+      const displayPhase = phase === 'prototypeData' ? 'PROTOTYPE' : phase.toUpperCase();
       doc.setFontSize(14);
-      doc.text(`Phase: ${phase.toUpperCase()}`, 14, yPos);
+      doc.text(`Phase: ${displayPhase}`, 14, yPos);
       yPos += 8;
       
-      if (typeof data === 'object') {
+      if (Array.isArray(data)) {
+        if (yPos > 270) { doc.addPage(); yPos = 20; }
+        
+        let tableData = data.map(item => {
+          let text = item.text || item.name || item;
+          if (typeof text === 'string') text = text.replace(/<br\s*\/?>/gi, '\n');
+          let desc = item.description ? `\nDescription: ${item.description}` : '';
+          let link = item.url && item.url !== '#' ? `\nURL: ${item.url}` : '';
+          return [text + desc + link];
+        });
+        
+        if (tableData.length > 0) {
+          autoTable(doc, {
+            startY: yPos,
+            head: [[displayPhase + ' ITEMS']],
+            body: tableData,
+            theme: 'grid',
+            styles: { overflow: 'linebreak' },
+            headStyles: { fillColor: [79, 70, 229] },
+            margin: { left: 14, right: 14 }
+          });
+          yPos = doc.lastAutoTable.finalY + 10;
+        }
+      } else if (typeof data === 'object') {
         for (const [key, val] of Object.entries(data)) {
           if (yPos > 270) { doc.addPage(); yPos = 20; }
           
           let tableData = [];
           if (Array.isArray(val)) {
-            tableData = val.map(item => [item.text || item]);
+            tableData = val.map(item => {
+              let text = item.text || item.name || item;
+              if (typeof text === 'string') text = text.replace(/<br\s*\/?>/gi, '\n');
+              return [text];
+            });
           } else if (typeof val === 'string') {
-            tableData = [[val]];
+            tableData = [[val.replace(/<br\s*\/?>/gi, '\n')]];
           } else {
             tableData = [[JSON.stringify(val)]];
           }
@@ -149,7 +191,10 @@ export function exportProjectPDF(project, includeChat, includeCanvases) {
     
     const chatData = project.messages.map(msg => {
       const speaker = msg.role === 'ai' ? 'Design AI' : 'Student';
-      const cleanContent = cleanMarkdown(msg.content);
+      let cleanContent = cleanMarkdown(msg.content);
+      if (msg.unlockedPhase) {
+        cleanContent += `\n\n[🏆 UNLOCKED PHASE: ${msg.unlockedPhase.toUpperCase()}]`;
+      }
       return [`${speaker}\n${msg.timestamp || ''}`, cleanContent];
     });
     

@@ -6,6 +6,7 @@ import { Input } from "../ui/input";
 export default function UploadPrototype({ isReadOnly, prototypes = [], onUpdate }) {
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
 
   const handleAddPrototype = () => {
@@ -13,11 +14,13 @@ export default function UploadPrototype({ isReadOnly, prototypes = [], onUpdate 
     const newProto = {
       id: Date.now().toString(),
       name: name.trim(),
+      description: description.trim() || "",
       url: url.trim() || "#"
     };
     const updated = [...prototypes, newProto];
     onUpdate && onUpdate(updated);
     setName("");
+    setDescription("");
     setUrl("");
     setIsAdding(false);
   };
@@ -56,11 +59,20 @@ export default function UploadPrototype({ isReadOnly, prototypes = [], onUpdate 
               <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-450 dark:text-zinc-500 select-none">New Prototype Info</h4>
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-zinc-500 select-none">Name / Description</label>
+                  <label className="text-[10px] font-semibold text-zinc-500 select-none">Name</label>
                   <Input 
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Figma High-Fidelity Mockups"
+                    className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-xs h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-zinc-500 select-none">Description (Optional)</label>
+                  <Input 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="e.g. Shows the user journey for the new feature"
                     className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-xs h-9"
                   />
                 </div>
@@ -78,7 +90,7 @@ export default function UploadPrototype({ isReadOnly, prototypes = [], onUpdate 
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => { setIsAdding(false); setName(""); setUrl(""); }}
+                  onClick={() => { setIsAdding(false); setName(""); setDescription(""); setUrl(""); }}
                   className="text-xs font-medium text-zinc-550 hover:text-zinc-700 h-8"
                 >
                   Cancel
@@ -124,6 +136,11 @@ export default function UploadPrototype({ isReadOnly, prototypes = [], onUpdate 
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-250 truncate pr-2 select-text">{proto.name}</p>
+                    {proto.description && (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 max-w-sm break-words select-text">
+                        {proto.description}
+                      </p>
+                    )}
                     {proto.url && proto.url !== "#" && (
                       <a 
                         href={proto.url} 

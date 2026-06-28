@@ -78,12 +78,19 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             currentPhase: projectRaw.currentPhase?.toLowerCase() || 'empathize' 
           };
           setActiveProject(normalizedActive);
-          setCurrentPhase(normalizedActive.currentPhase);
+          
+          // Force teachers to start reviewing from the 'empathize' phase
+          const initialPhase = isTeacher ? 'empathize' : normalizedActive.currentPhase;
+          setCurrentPhase(initialPhase);
+          
           setMessages(normalizedActive.messages || []);
         } else if (normalizedProjects.length > 0) {
           const fallbackProject = normalizedProjects[0];
           setActiveProject(fallbackProject);
-          setCurrentPhase(fallbackProject.currentPhase);
+          
+          const initialPhase = isTeacher ? 'empathize' : fallbackProject.currentPhase;
+          setCurrentPhase(initialPhase);
+          
           setMessages(fallbackProject.messages || []);
         }
       } catch (err) {
@@ -167,10 +174,9 @@ export default function WorkspacePage({ theme, toggleTheme }) {
         aiResponseText = aiResponseText.replace('[UNLOCK_NEXT_PHASE]', '').trim();
       }
 
-      const aiMsg = createChatMessage("ai", aiResponseText);
-      const finalMessages = [...newMessages, aiMsg];
-      
       let updatedUnlockedPhases = activeProject.unlockedPhases || ['empathize'];
+      let unlockedPhaseName = null;
+
       if (shouldUnlockNext) {
         const PHASE_ORDER = ["empathize", "define", "ideate", "prototype", "test"];
         const currIdx = PHASE_ORDER.indexOf(currentPhase);
@@ -178,12 +184,19 @@ export default function WorkspacePage({ theme, toggleTheme }) {
           const nextPhase = PHASE_ORDER[currIdx + 1];
           if (!updatedUnlockedPhases.includes(nextPhase)) {
             updatedUnlockedPhases = [...updatedUnlockedPhases, nextPhase];
+            unlockedPhaseName = nextPhase;
             // Show toast notification using a simple alert or console for now, 
             // since we don't have a toast library explicitly in scope. A browser alert works for a prototype.
             alert(`🎉 Congratulations! You've unlocked the ${nextPhase.toUpperCase()} phase!`);
           }
         }
       }
+
+      const aiMsg = createChatMessage("ai", aiResponseText);
+      if (unlockedPhaseName) {
+        aiMsg.unlockedPhase = unlockedPhaseName;
+      }
+      const finalMessages = [...newMessages, aiMsg];
 
       // Optimistic local update
       setMessages(finalMessages);
@@ -249,8 +262,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   // Ideate fields
   const ideateNotes = canvasData.ideate || [];
 
-  // Prototype fields
-  const prototypeList = canvasData.prototype || [];
+  // Prototype fields (saved as prototypeData because Mongoose drops 'prototype' key)
+  const prototypeList = canvasData.prototypeData || [];
 
   // Test fields
   const testWorked = canvasData.test?.worked || "";
@@ -282,7 +295,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       } else if (phase === "ideate") {
         updatedCanvas.ideate = fieldOrValue;
       } else if (phase === "prototype") {
-        updatedCanvas.prototype = fieldOrValue;
+        updatedCanvas.prototypeData = fieldOrValue;
       } else if (phase === "test") {
         const currentTest = typeof canvasData.test === "object" ? canvasData.test : {};
         updatedCanvas.test = {
