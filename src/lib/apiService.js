@@ -54,6 +54,9 @@ export const apiService = {
     method: 'PUT',
     body: JSON.stringify(updatePayload),
   }),
+  deleteProject: (id) => fetchApi(`/api/projects/${id}`, {
+    method: 'DELETE',
+  }),
 
   // Challenges
   getChallenges: (teacherId) => fetchApi(teacherId ? `/api/challenges?teacherId=${teacherId}` : '/api/challenges'),

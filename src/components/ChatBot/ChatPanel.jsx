@@ -116,7 +116,7 @@ export default function ChatPanel({
   }, [messages, isAiTyping]);
 
   return (
-    <section className="w-1/2 flex flex-col border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 relative">
+    <section className="flex-1 w-full flex flex-col md:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 relative min-h-[50%] md:min-h-0">
       {/* Chat Header */}
       <div className="h-12 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center justify-between px-4 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
         <div className="flex items-center gap-2">

@@ -16,7 +16,8 @@ import {
   Filter,
   ChevronRight,
   UserCheck,
-  GraduationCap
+  GraduationCap,
+  Trash2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -107,6 +108,7 @@ export default function Dashboard({ theme, toggleTheme }) {
 
   // Common Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
 
   // Student Modal Inputs
   const [newTitle, setNewTitle] = useState("");
@@ -178,6 +180,19 @@ export default function Dashboard({ theme, toggleTheme }) {
       navigate(`/workspace/${newProject.id}`);
     } catch (err) {
       console.error("Failed to create project:", err);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+    try {
+      await apiService.deleteProject(projectToDelete);
+      setStudentProjects(studentProjects.filter(p => p.id !== projectToDelete));
+      setProjectToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+      alert("Failed to delete project. Please try again. Error: " + err.message);
+      setProjectToDelete(null); // Close modal even on error so they aren't stuck
     }
   };
 
@@ -405,11 +420,11 @@ export default function Dashboard({ theme, toggleTheme }) {
                     <TableRow className="hover:bg-transparent">
                       <TableHead className="text-zinc-500 font-medium">Student / Team</TableHead>
                       <TableHead className="text-zinc-500 font-medium w-[20%]">Project Title</TableHead>
-                      <TableHead className="text-zinc-500 font-medium w-[18%]">Challenge</TableHead>
+                      <TableHead className="text-zinc-500 font-medium hidden md:table-cell w-[18%]">Challenge</TableHead>
                       <TableHead className="text-zinc-500 font-medium">Phase</TableHead>
-                      <TableHead className="text-zinc-500 font-medium">AI Creativity</TableHead>
-                      <TableHead className="text-zinc-500 font-medium">Teamwork</TableHead>
-                      <TableHead className="text-zinc-500 font-medium">Last Active</TableHead>
+                      <TableHead className="text-zinc-500 font-medium hidden md:table-cell">AI Creativity</TableHead>
+                      <TableHead className="text-zinc-500 font-medium hidden md:table-cell">Teamwork</TableHead>
+                      <TableHead className="text-zinc-500 font-medium hidden lg:table-cell">Last Active</TableHead>
                       <TableHead className="text-zinc-500 font-medium text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -427,7 +442,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                           <TableRow key={project.id} className="border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30">
                             <TableCell className="font-medium text-zinc-800 dark:text-zinc-200">{project.studentOrTeamName || "Student"}</TableCell>
                             <TableCell className="text-zinc-700 dark:text-zinc-300 font-medium">{project.title || project.projectTitle || "Untitled Project"}</TableCell>
-                            <TableCell className="text-zinc-600 dark:text-zinc-400 text-sm">{challengeTitleById[project.challengeId] || <span className="text-zinc-400 dark:text-zinc-600 italic">Unassigned</span>}</TableCell>
+                            <TableCell className="text-zinc-600 dark:text-zinc-400 text-sm hidden md:table-cell">{challengeTitleById[project.challengeId] || <span className="text-zinc-400 dark:text-zinc-600 italic">Unassigned</span>}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <div className={`p-1.5 rounded-md ${PhaseData.bg}`}>
@@ -436,9 +451,9 @@ export default function Dashboard({ theme, toggleTheme }) {
                                 <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{PhaseData.label}</span>
                               </div>
                             </TableCell>
-                            <TableCell>{renderStatusBadge(project.creativityScore || "Not Evaluated", 'creativity')}</TableCell>
-                            <TableCell>{renderStatusBadge(project.teamworkStatus || "Solo", 'teamwork')}</TableCell>
-                            <TableCell className="text-xs text-zinc-400">{project.lastUpdated || project.lastActiveDate || "Recently"}</TableCell>
+                            <TableCell className="hidden md:table-cell">{renderStatusBadge(project.creativityScore || "Not Evaluated", 'creativity')}</TableCell>
+                            <TableCell className="hidden md:table-cell">{renderStatusBadge(project.teamworkStatus || "Solo", 'teamwork')}</TableCell>
+                            <TableCell className="text-xs text-zinc-400 hidden lg:table-cell">{project.lastUpdated || project.lastActiveDate || "Recently"}</TableCell>
                             <TableCell className="text-right">
                               <Button 
                                 onClick={() => navigate(`/teacher/review/${project.id}`)}
@@ -511,13 +526,21 @@ export default function Dashboard({ theme, toggleTheme }) {
                         </div>
                       </div>
 
-                      <div className="mt-auto">
+                      <div className="mt-auto flex gap-3">
                         <Button 
                           onClick={() => navigate(`/workspace/${activeRecentProject.id}`)}
                           className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white transition-all font-semibold px-6 shadow-sm border border-zinc-800 dark:border-transparent cursor-pointer"
                         >
                           Continue Working
                           <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setProjectToDelete(activeRecentProject.id)}
+                          className="border-rose-200 dark:border-rose-800 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-600 transition-colors cursor-pointer px-3"
+                          title="Delete Project"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -554,8 +577,20 @@ export default function Dashboard({ theme, toggleTheme }) {
                         <CardTitle className="text-lg font-semibold leading-tight text-zinc-800 dark:text-zinc-200 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
                           {project.title}
                         </CardTitle>
-                        <div className={`p-2 rounded-lg shrink-0 ${PhaseData.bg}`}>
-                          <Icon className={`h-5 w-5 ${PhaseData.color}`} />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjectToDelete(project.id);
+                            }}
+                            className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
+                            title="Delete Project"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                          <div className={`p-2 rounded-lg shrink-0 ${PhaseData.bg}`}>
+                            <Icon className={`h-5 w-5 ${PhaseData.color}`} />
+                          </div>
                         </div>
                       </div>
                     </CardHeader>
@@ -712,6 +747,36 @@ export default function Dashboard({ theme, toggleTheme }) {
                 className={`${isTeacher ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'} text-white shadow-sm h-9 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isTeacher ? "Save Challenge" : "Launch Project"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {projectToDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-500 mb-4">
+              <AlertCircle className="h-6 w-6" />
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Delete Project?</h3>
+            </div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+              Are you sure you want to delete this project? This action cannot be undone and all data will be permanently lost.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => setProjectToDelete(null)}
+                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleDeleteProject}
+                className="bg-rose-500 hover:bg-rose-600 text-white shadow-sm cursor-pointer"
+              >
+                Yes, Delete
               </Button>
             </div>
           </div>

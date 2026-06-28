@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Star, ArrowLeft } from "lucide-react";
+import { Plus, Search, Star, ArrowLeft, Menu, MessageSquare, LayoutTemplate, X, Trash2, AlertCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 // Standard shadcn/ui style components
@@ -38,6 +38,9 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeMobileView, setActiveMobileView] = useState("chat"); // "chat" or "canvas"
+  const [projectToDelete, setProjectToDelete] = useState(null);
 
   // Simulated Read-Only state for Teacher Review
   const isReadOnly = window.location.pathname.includes('/teacher/review/');
@@ -109,6 +112,26 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       } catch (err) {
         console.error("Failed to update phase to DB:", err);
       }
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+    try {
+      await apiService.deleteProject(projectToDelete);
+      
+      const remainingProjects = studentProjects.filter(p => p.id !== projectToDelete);
+      setStudentProjects(remainingProjects);
+      
+      if (activeProject && activeProject.id === projectToDelete) {
+        navigate('/dashboard');
+      }
+      
+      setProjectToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+      alert("Failed to delete project. Please try again. Error: " + err.message);
+      setProjectToDelete(null); // Close modal even on error so they aren't stuck
     }
   };
 
@@ -307,7 +330,17 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       
       {/* GLOBAL HEADER */}
       <Header theme={theme} toggleTheme={toggleTheme} brainColor="text-pink-500 dark:text-pink-400">
-        <div className="flex items-center gap-3 mr-auto">
+        <div className="flex items-center gap-2 sm:gap-3 mr-auto">
+          {!isReadOnly && (
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="lg:hidden text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 h-8 w-8 shrink-0"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
           <Button 
             variant="ghost" 
             size="sm" 
@@ -321,15 +354,17 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               }
             }}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {usersService.getCurrentUser()?.role?.toLowerCase() === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">
+              {usersService.getCurrentUser()?.role?.toLowerCase() === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
+            </span>
           </Button>
-          <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800" />
-          <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200">
+          <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800 hidden sm:block" />
+          <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200 truncate max-w-[120px] sm:max-w-xs">
             {activeProject ? activeProject.title : "Design Thinking Project"}
           </h1>
           {isReadOnly && (
-            <Badge className="bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100/50 gap-1.5 text-xs font-semibold py-0.5 px-2 capitalize shadow-sm select-none">
+            <Badge className="hidden sm:inline-flex bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100/50 gap-1.5 text-xs font-semibold py-0.5 px-2 capitalize shadow-sm select-none">
               Review Mode (Read-Only)
             </Badge>
           )}
@@ -339,9 +374,22 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       {/* MAIN BODY WRAPPER */}
       <div className="flex flex-1 overflow-hidden">
         
-        {/* PANEL 1: LEFT SIDEBAR (Fixed w-64) */}
-        <aside className="w-64 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+        {/* PANEL 1: LEFT SIDEBAR (Mobile overlay + Desktop fixed) */}
+        {!isReadOnly && (
+          <>
+            {isSidebarOpen && (
+              <div 
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+            )}
+            <aside className={`w-64 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex-col absolute inset-y-0 left-0 z-50 transform transition-transform duration-300 lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} flex lg:flex`}>
           <div className="p-4 space-y-5 flex-1 overflow-y-auto">
+            <div className="flex justify-end lg:hidden mb-2">
+              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="text-zinc-500 h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
             <Button 
               disabled={isReadOnly}
               className="w-full bg-zinc-900 text-zinc-50 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
@@ -378,6 +426,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
                       : "hover:bg-zinc-200/50 dark:hover:bg-zinc-900/50"
                   }`}
                   onClick={() => {
+                    setIsSidebarOpen(false);
                     if (isReadOnly) {
                       navigate(`/teacher/review/${project.id}`);
                     } else {
@@ -385,38 +434,72 @@ export default function WorkspacePage({ theme, toggleTheme }) {
                     }
                   }}
                 >
-                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate pr-2">{project.title}</span>
-                  {project.isRecent && <Star className="h-3.5 w-3.5 text-yellow-500/70 fill-yellow-500/20 shrink-0" />}
+                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate pr-2 flex-1">{project.title}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {project.isRecent && <Star className="h-3.5 w-3.5 text-yellow-500/70 fill-yellow-500/20" />}
+                    {!isReadOnly && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProjectToDelete(project.id);
+                        }}
+                        className="p-1 text-zinc-400 hover:text-rose-500 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        title="Delete Project"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </aside>
+        </>
+        )}
 
         {/* PANELS 2 & 3 CONTAINER */}
-        <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-zinc-950">
+        <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-zinc-950 relative">
           
+          {/* MOBILE VIEW TOGGLE */}
+          <div className="md:hidden flex border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shrink-0">
+            <button 
+              className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${activeMobileView === 'chat' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-zinc-500'}`}
+              onClick={() => setActiveMobileView('chat')}
+            >
+              <MessageSquare className="h-4 w-4" /> Chat
+            </button>
+            <button 
+              className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${activeMobileView === 'canvas' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-zinc-500'}`}
+              onClick={() => setActiveMobileView('canvas')}
+            >
+              <LayoutTemplate className="h-4 w-4" /> Canvas
+            </button>
+          </div>
+
           {/* HORIZONTAL PHASE STEPPER (Top Bar) */}
           <PhaseStepper currentPhase={currentPhase} setCurrentPhase={handlePhaseChange} />
 
           {/* CENTRAL SPLIT VIEW */}
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 overflow-hidden flex-row relative">
             
             {/* PANEL 2: SOCRATIC CHATBOT (Left/Middle Column, 50%) */}
-            <ChatPanel
-              messages={messages}
-              inputValue={inputValue}
-              setInputValue={setInputValue}
-              handleSendMessage={handleSendMessage}
-              currentPhase={currentPhase}
-              isReadOnly={isReadOnly}
-              isAiTyping={isAiTyping}
-              onExportChat={handleExportChat}
-              canExportChat={isReadOnly}
-            />
+            <div className={`w-full md:w-1/2 flex-col absolute inset-0 md:relative md:flex ${activeMobileView === 'chat' ? 'flex' : 'hidden'}`}>
+              <ChatPanel
+                messages={messages}
+                inputValue={inputValue}
+                setInputValue={setInputValue}
+                handleSendMessage={handleSendMessage}
+                currentPhase={currentPhase}
+                isReadOnly={isReadOnly}
+                isAiTyping={isAiTyping}
+                onExportChat={handleExportChat}
+                canExportChat={isReadOnly}
+              />
+            </div>
 
             {/* PANEL 3: PHASE DELIVERABLES CANVAS (Right Column, 50%) */}
-            <section className="w-1/2 flex flex-col bg-white dark:bg-zinc-950">
+            <section className={`w-full md:w-1/2 flex-col bg-white dark:bg-zinc-950 min-h-0 md:border-l border-zinc-200 dark:border-zinc-800 absolute inset-0 md:relative md:flex ${activeMobileView === 'canvas' ? 'flex' : 'hidden'}`}>
               
               {/* Canvas Header */}
               <div className="h-12 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center justify-between px-6 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
@@ -438,6 +521,37 @@ export default function WorkspacePage({ theme, toggleTheme }) {
 
         </main>
       </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {projectToDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-500 mb-4">
+              <AlertCircle className="h-6 w-6" />
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Delete Project?</h3>
+            </div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+              Are you sure you want to delete this project? This action cannot be undone and all data will be permanently lost.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => setProjectToDelete(null)}
+                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleDeleteProject}
+                className="bg-rose-500 hover:bg-rose-600 text-white shadow-sm cursor-pointer"
+              >
+                Yes, Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

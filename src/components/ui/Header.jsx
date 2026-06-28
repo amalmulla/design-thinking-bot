@@ -30,17 +30,17 @@ export default function Header({
   };
 
   return (
-    <header className="h-14 shrink-0 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50 transition-all duration-200">
+    <header className="h-14 shrink-0 flex items-center justify-between px-4 sm:px-6 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50 transition-all duration-200">
       {/* Left side: Brand Logo and Title */}
       <div className="flex items-center gap-2 shrink-0">
         <Brain className={`h-5 w-5 ${brainColor} transition-colors`} />
-        <span className="text-sm font-bold tracking-wide text-zinc-800 dark:text-zinc-100">
+        <span className="text-sm font-bold tracking-wide text-zinc-800 dark:text-zinc-100 hidden sm:inline-block">
           Design Thinking Bot
         </span>
       </div>
 
       {/* Middle & Right: Children controls and unified user controls */}
-      <div className="flex flex-1 items-center justify-end gap-4 ml-4">
+      <div className="flex flex-1 items-center justify-end gap-2 sm:gap-4 ml-2 sm:ml-4 min-w-0 shrink-0">
         {/* Render page-specific custom controls (e.g. back buttons) */}
         {children}
         
@@ -51,14 +51,14 @@ export default function Header({
             {currentUser.role?.toLowerCase() === "teacher" ? (
               <Badge 
                 variant="secondary" 
-                className="bg-indigo-100 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-semibold px-2.5 py-0.5 capitalize shadow-sm text-xs cursor-default"
+                className="bg-indigo-100 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-semibold px-2.5 py-0.5 capitalize shadow-sm text-xs cursor-default hidden sm:inline-flex"
               >
                 Teacher
               </Badge>
             ) : (
               <Badge 
                 variant="secondary" 
-                className="bg-zinc-200/60 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-800 font-semibold px-2.5 py-0.5 capitalize shadow-sm text-xs cursor-default"
+                className="bg-zinc-200/60 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-800 font-semibold px-2.5 py-0.5 capitalize shadow-sm text-xs cursor-default hidden sm:inline-flex"
               >
                 Student
               </Badge>

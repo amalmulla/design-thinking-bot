@@ -34,7 +34,7 @@ export default function EmpathyMapCanvas({
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4 h-full content-start">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 content-start">
       {quadrants.map((quadrant) => (
         <Card key={quadrant.key} className={`bg-zinc-50 dark:bg-zinc-900/50 border ${quadrant.color} shadow-sm rounded-xl flex flex-col`}>
           <CardHeader className="pb-2 pt-4 px-4 border-b border-zinc-200 dark:border-zinc-800/30 select-none flex flex-row items-center justify-between">

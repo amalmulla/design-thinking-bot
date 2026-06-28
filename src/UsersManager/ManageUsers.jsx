@@ -59,15 +59,7 @@ export default function ManageUsers({ theme, toggleTheme }) {
     }, 3000);
   };
 
-  const handleRoleChange = async (id, newRole) => {
-    try {
-      await usersService.changeUserRole(id, newRole);
-      await fetchUsersData();
-      showNotification(`Successfully changed user role to ${newRole}.`);
-    } catch (err) {
-      showNotification(err.message || "Failed to update user role.", "error");
-    }
-  };
+
 
   const handleToggleBlock = async (id) => {
     try {
@@ -162,12 +154,11 @@ export default function ManageUsers({ theme, toggleTheme }) {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-zinc-250 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    <th className="px-6 py-4">User ID / Name</th>
-                    <th className="px-6 py-4">Email</th>
-                    <th className="px-6 py-4">Password</th>
-                    <th className="px-6 py-4">System Role</th>
-                    <th className="px-6 py-4">Account Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Email</th>
+                    <th className="px-4 py-3 hidden md:table-cell">Role</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -178,43 +169,25 @@ export default function ManageUsers({ theme, toggleTheme }) {
                         user.blocked ? "bg-rose-50/10 dark:bg-rose-950/5" : ""
                       }`}
                     >
-                      {/* Name & ID */}
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                            {user.name}
-                          </span>
-                          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono tracking-tighter">
-                            ID: {user.id}
-                          </span>
-                        </div>
+                      {/* Name */}
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                          {user.name}
+                        </span>
                       </td>
 
                       {/* Email */}
-                      <td className="px-6 py-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      <td className="px-4 py-3 text-sm font-medium text-zinc-700 dark:text-zinc-300 hidden sm:table-cell">
                         {user.email}
                       </td>
 
-                      {/* Password Privacy Mask */}
-                      <td className="px-6 py-4 text-xs font-mono text-zinc-400 dark:text-zinc-600 select-none">
-                        •••••••• (secured)
-                      </td>
-
-                      {/* Role Toggle Dropdown */}
-                      <td className="px-6 py-4">
-                        <select
-                          value={user.role}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          disabled={user.id === currentUser.id} // Prevent self role downgrading
-                          className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-semibold px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500 cursor-pointer disabled:cursor-not-allowed text-zinc-700 dark:text-zinc-300"
-                        >
-                          <option value="Student">Student</option>
-                          <option value="Teacher">Teacher</option>
-                        </select>
+                      {/* Role Text */}
+                      <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400 hidden md:table-cell capitalize">
+                        {user.role}
                       </td>
 
                       {/* Access Status Badge */}
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3">
                         {user.blocked ? (
                           <Badge className="bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-455 border border-rose-100 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 gap-1 text-[10px] font-bold">
                             <Ban className="w-3 h-3" /> Blocked
@@ -227,19 +200,19 @@ export default function ManageUsers({ theme, toggleTheme }) {
                       </td>
 
                       {/* Inline Actions */}
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 py-3 text-right">
                         <Button
                           variant={user.blocked ? "outline" : "destructive"}
                           size="sm"
                           disabled={user.id === currentUser.id} // Prevent blocking oneself
                           onClick={() => handleToggleBlock(user.id)}
-                          className={`text-xs font-semibold px-3 h-8 cursor-pointer ${
+                          className={`text-xs font-semibold px-2 py-1 h-7 cursor-pointer ${
                             user.blocked 
                               ? "border-zinc-200 dark:border-zinc-750 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300" 
                               : "bg-rose-600 hover:bg-rose-500 text-white"
                           }`}
                         >
-                          {user.blocked ? "Unblock" : "Block User"}
+                          {user.blocked ? "Unblock" : "Block"}
                         </Button>
                       </td>
                     </tr>
