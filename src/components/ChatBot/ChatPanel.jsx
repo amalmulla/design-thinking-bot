@@ -101,7 +101,7 @@ export default function ChatPanel({
   currentPhase,
   isReadOnly,
   isAiTyping = false,
-  onExportChat,
+  onExportProject,
   canExportChat = false
 }) {
   const scrollRef = useRef(null);
@@ -128,13 +128,13 @@ export default function ChatPanel({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={onExportChat}
+            onClick={onExportProject}
             disabled={!messages || messages.length === 0}
-            title={messages && messages.length > 0 ? "Export this conversation as Markdown" : "No conversation to export"}
+            title={messages && messages.length > 0 ? "Export this project" : "No project data to export"}
             className="h-7 text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 border border-zinc-200 dark:border-zinc-800 rounded gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
-            Export Chat
+            Export Project
           </Button>
         )}
       </div>

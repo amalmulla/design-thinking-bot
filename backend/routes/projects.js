@@ -44,6 +44,11 @@ router.get('/', async (req, res) => {
     const teacherMap = {};
     teachers.forEach((t) => { teacherMap[t._id.toString()] = t.name; });
 
+    const studentIds = onlyValidIds([...new Set(projects.map((p) => p.studentId).filter(Boolean))]);
+    const students = await User.find({ _id: { $in: studentIds } }).select('name').lean();
+    const studentMap = {};
+    students.forEach((s) => { studentMap[s._id.toString()] = s.name; });
+
     const enriched = projects.map((p) => {
       const challenge = challengeMap[p.challengeId];
       const ownerTeacherId = challenge ? challenge.createdByTeacherId : null;
@@ -52,6 +57,7 @@ router.get('/', async (req, res) => {
         challengeTitle: challenge ? challenge.title : null,
         teacherId: ownerTeacherId,
         teacherName: ownerTeacherId ? (teacherMap[ownerTeacherId] || null) : null,
+        studentName: p.studentId ? (studentMap[p.studentId] || null) : null,
       };
     });
 
@@ -71,7 +77,11 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ message: 'Project not found.' });
     }
 
-    res.status(200).json(project);
+    let projectObj = project.toObject ? project.toObject() : project;
+    const student = projectObj.studentId ? await User.findById(projectObj.studentId).select('name').lean() : null;
+    projectObj.studentName = student ? student.name : null;
+
+    res.status(200).json(projectObj);
   } catch (error) {
     console.error('Error fetching project:', error);
     res.status(500).json({ message: 'Server error fetching project' });
