@@ -48,24 +48,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleDevLogin = async (email, password) => {
-    setFormData({ email, password });
-    setError("");
-    
-    try {
-      const loggedUser = await usersService.login(email, password);
-      
-      const userRole = loggedUser.role ? loggedUser.role.toLowerCase() : "";
-      if (userRole === "teacher" || userRole === "admin") {
-        navigate("/teacher");
-      } else {
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      setError(err.message || "Invalid email or password.");
-    }
-  };
-
   return (
     <div className="bg-white dark:bg-zinc-900 text-black dark:text-white min-h-screen flex flex-col items-center justify-center p-4 font-sans transition-colors duration-200">
       <Card className="w-full max-w-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-2xl overflow-hidden">
@@ -161,29 +143,6 @@ export default function LoginPage() {
             </button>
           </div>
         </CardFooter>
-
-        {/* 🔧 Dev Testing Controls */}
-        <div className="mx-6 mb-6 p-4 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20">
-          <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-3 flex items-center gap-1.5 justify-center">
-            <span>🔧 Dev Testing Controls</span>
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              type="button"
-              onClick={() => handleDevLogin("student@example.com", "password")}
-              className="flex-1 py-1.5 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all duration-200 cursor-pointer text-center"
-            >
-              Log in as Student
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDevLogin("teacher@example.com", "password")}
-              className="flex-1 py-1.5 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all duration-200 cursor-pointer text-center"
-            >
-              Log in as Teacher
-            </button>
-          </div>
-        </div>
 
       </Card>
     </div>
