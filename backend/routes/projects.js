@@ -96,7 +96,8 @@ router.post('/', async (req, res) => {
       studentId,
       challengeId,
       name: name || 'Untitled Project',
-      currentPhase: 'Empathize',
+      currentPhase: 'empathize',
+      unlockedPhases: ['empathize'],
       progressPercentage: 0,
       canvasData: {},
       messages: []
@@ -113,7 +114,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, currentPhase, progressPercentage, canvasData, message, messages } = req.body;
+    const { name, currentPhase, unlockedPhases, progressPercentage, canvasData, message, messages } = req.body;
 
     const project = await Project.findById(id);
     if (!project) {
@@ -122,6 +123,7 @@ router.put('/:id', async (req, res) => {
 
     if (name !== undefined) project.name = name;
     if (currentPhase !== undefined) project.currentPhase = currentPhase;
+    if (unlockedPhases !== undefined) project.unlockedPhases = unlockedPhases;
     if (progressPercentage !== undefined) project.progressPercentage = progressPercentage;
     // Direct assignment (not spread) to ensure full canvasData is always saved cleanly
     if (canvasData !== undefined) project.canvasData = canvasData;

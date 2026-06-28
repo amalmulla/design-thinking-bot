@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, Target, Lightbulb, Layers, FlaskConical } from "lucide-react";
+import { Users, Target, Lightbulb, Layers, FlaskConical, Lock } from "lucide-react";
 
 export const DESIGN_PHASES = [
   { id: "empathize", label: "Empathize", icon: Users, color: "text-rose-600 dark:text-rose-400" },
@@ -9,7 +9,7 @@ export const DESIGN_PHASES = [
   { id: "test", label: "Test", icon: FlaskConical, color: "text-emerald-600 dark:text-emerald-400" },
 ];
 
-export default function PhaseStepper({ currentPhase, setCurrentPhase }) {
+export default function PhaseStepper({ currentPhase, setCurrentPhase, unlockedPhases = ['empathize'] }) {
   return (
     <div className="h-16 shrink-0 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-6 overflow-x-auto no-scrollbar bg-white dark:bg-zinc-950">
       <div className="flex items-center w-full max-w-4xl mx-auto justify-between">
@@ -21,18 +21,29 @@ export default function PhaseStepper({ currentPhase, setCurrentPhase }) {
           const currentIndex = DESIGN_PHASES.findIndex(p => p.id === currentPhase);
           const isCompleted = index < currentIndex;
 
+          const isUnlocked = unlockedPhases.includes(phase.id);
+
           return (
             <React.Fragment key={phase.id}>
               <button
-                onClick={() => setCurrentPhase(phase.id)}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all cursor-pointer ${
+                onClick={() => {
+                  if (isUnlocked) setCurrentPhase(phase.id);
+                }}
+                disabled={!isUnlocked}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${
                   isActive 
-                    ? "bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-semibold" 
-                    : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/50"
+                    ? "bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-semibold cursor-default" 
+                    : isUnlocked 
+                      ? "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/50 cursor-pointer"
+                      : "text-zinc-400 dark:text-zinc-600 cursor-not-allowed opacity-60"
                 }`}
               >
                 <div className={`p-1.5 rounded-md ${isActive ? 'bg-zinc-200 dark:bg-zinc-800' : ''}`}>
-                  <Icon className={`h-4 w-4 ${isActive ? phase.color : (isCompleted ? 'text-zinc-400 dark:text-zinc-500' : 'text-zinc-400 dark:text-zinc-650')}`} />
+                  {!isUnlocked ? (
+                    <Lock className="h-4 w-4 text-zinc-400 dark:text-zinc-600" />
+                  ) : (
+                    <Icon className={`h-4 w-4 ${isActive ? phase.color : (isCompleted ? 'text-zinc-400 dark:text-zinc-500' : 'text-zinc-400 dark:text-zinc-650')}`} />
+                  )}
                 </div>
                 <span className="text-sm font-semibold tracking-wide">{phase.label}</span>
               </button>

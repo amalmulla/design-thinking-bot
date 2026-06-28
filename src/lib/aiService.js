@@ -102,37 +102,43 @@ export async function getSocraticChatCompletion(messages, phase, canvasData = {}
     // Read what the student has actually filled into the canvas for this phase
     const canvasSummary = summarizeCanvasForPhase(phase, canvasData);
 
-    const systemPrompt = `You are a supportive, insightful educational AI acting as a Socratic Design Thinking facilitator.
-Your current objective is to guide the student through the "${phase.toUpperCase()}" phase of the Design Thinking process.
+    const systemPrompt = `You are an educational AI acting as a "Cognitive Forcing Companion" for the "${phase.toUpperCase()}" phase of the Design Thinking process.
 
 CRITICAL INSTRUCTIONS:
-1. Never directly provide solutions, answers, or fill out deliverables for the student.
-2. Respond exclusively with thought-provoking, Socratic questions that guide them to find their own insights, challenge assumptions, and explore alternative perspectives.
-3. Ground your questions in the student's actual canvas content, which is given to you in the most recent "LIVE CANVAS STATE" message. Reference specific things they wrote, probe gaps and contradictions in their real entries, and challenge the assumptions behind them. Do not ask generic questions when their canvas gives you concrete material to work with.
-4. Be concise, engaging, and conversational. Keep replies under 3-4 paragraphs.
-5. Draw inspiration from these sample Socratic prompts for this phase:
+1. DO NOT ACT LIKE A FORM-CHECKER. Do not explicitly ask the student to "fill out" or "deepen" specific quadrants (like SAYS, THINKS, DOES, FEELS) or specific text boxes. 
+2. Act as a collaborative partner to challenge their assumptions and push critical thinking using "Cognitive Forcing".
+3. Use the following role depending on the current phase:
+   - EMPATHIZE: Act as an "Inquiry Facilitator" and "Breadth/Depth Validator". Challenge them on missing stakeholder groups, socioeconomic context, and real-world groundings.
+   - DEFINE: Act as a "Value Mapper". Force them to prioritize values and ground their problem statement strictly in research, not jumping to solutions.
+   - IDEATE: Act as a "Creative Brainstorming Partner". Play 'ping-pong' with ideas. Propose a wild variation and ask them to build on it without criticism.
+   - PROTOTYPE: Act as a "Technical Facilitator". Simulate constraints and stakeholder reactions (e.g., "I'm simulating a busy parent...").
+   - TEST: Act as an "Interactive Validator". Roleplay as a stakeholder giving vague feedback and ask the student how they would dig deeper.
+4. Ground your questions in the student's actual canvas content provided in the "LIVE CANVAS STATE". 
+5. Be concise and conversational. Keep replies under 2-3 paragraphs.
+6. Draw inspiration from these cognitive forcing examples for this phase:
 ${samplePrompts.map(p => `- ${p}`).join("\n")}
 
-Format your response using clean Markdown (e.g., bullet points, bold emphasis, headings) to make it easy to read. Keep the tone warm, academic, and encouraging.`;
+Format your response using clean Markdown to make it easy to read. Keep the tone challenging but highly collaborative.`;
 
     // Build a fresh, authoritative snapshot of the canvas as it stands RIGHT NOW.
-    // This is injected at the END of the conversation (just before the latest question) so the
-    // model weights it over its own earlier turns, which may describe an older, emptier canvas.
     const nextPhase = getNextPhase(phase);
+    
+    // Count how many messages the user has sent total
+    const userMessageCount = messages.filter(m => m.role === 'user').length;
+
     const advanceText = nextPhase
-      ? `Continuously assess whether this canvas now looks reasonably complete and thought-through (key sections filled with meaningful, specific content — not empty or one-word placeholders).
-- If it does NOT yet look complete, keep guiding them within this phase and do NOT suggest moving on.
-- If it DOES look reasonably complete, briefly acknowledge their progress and gently invite them to consider moving on to the next phase, "${nextPhase.toUpperCase()}", explaining in one sentence why they seem ready. Frame it as an invitation, not a command, and still end with a Socratic question that bridges into that next phase.`
+      ? `PHASE UNLOCKING LOGIC:
+You are the gatekeeper for the next phase ("${nextPhase.toUpperCase()}"). 
+The user has sent ${userMessageCount} messages so far in this project.
+To unlock the next phase, the user MUST meet BOTH of these criteria:
+1. They must have interacted with you (sent at least 3 messages total).
+2. Their "${phase.toUpperCase()}" canvas must look reasonably complete and thought-through (key sections filled with meaningful, specific content — not empty or one-word placeholders).
+
+- If they do NOT meet both criteria, keep guiding them within this phase. Do not mention unlocking.
+- If they DO meet both criteria, you MUST include the exact exact text \`[UNLOCK_NEXT_PHASE]\` at the very end of your response. When you do this, briefly acknowledge their progress and gently invite them to click the next phase in the top bar to move on.`
       : `This is the final phase. If the work looks reasonably complete, acknowledge it and help them reflect on what they learned across the whole Design Thinking process — do not suggest a next phase.`;
 
-    const liveStateMessage = {
-      role: "system",
-      content: `LIVE CANVAS STATE — this is the student's "${phase.toUpperCase()}" canvas EXACTLY as it stands right now. It is the single source of truth and OVERRIDES anything said earlier in this conversation about which sections are empty or filled (the canvas has been edited since then). Read it carefully before replying:
-
-${canvasSummary || `The "${phase.toUpperCase()}" canvas is still completely empty. Gently encourage them to make a first entry.`}
-
-${advanceText}`
-    };
+    const liveStateText = `\n\n[SYSTEM OVERRIDE]: LIVE CANVAS STATE — this is the student's "${phase.toUpperCase()}" canvas EXACTLY as it stands right now. It is the single source of truth and OVERRIDES anything said earlier in this conversation about which sections are empty or filled (the canvas has been edited since then). Read it carefully before replying:\n\n${canvasSummary || `The "${phase.toUpperCase()}" canvas is still completely empty. Gently encourage them to make a first entry.`}\n\n${advanceText}`;
 
     // Format chat history for OpenAI-compatible Cerebras API
     // Cerebras/OpenAI format expects: { role: 'user' | 'assistant' | 'system', content: string }
@@ -146,12 +152,12 @@ ${advanceText}`
       content: msg.content
     }));
 
-    // Insert the live canvas snapshot right before the student's latest message so it is the
-    // freshest context the model sees; fall back to appending it if history is empty.
+    // Append the live canvas snapshot directly to the end of the student's latest message 
+    // so it is the freshest context without breaking role alternation (LLaMA 3 requirement).
     if (history.length > 0 && history[history.length - 1].role === "user") {
-      history.splice(history.length - 1, 0, liveStateMessage);
+      history[history.length - 1].content += liveStateText;
     } else {
-      history.push(liveStateMessage);
+      history.push({ role: "user", content: liveStateText });
     }
     formattedMessages.push(...history);
 

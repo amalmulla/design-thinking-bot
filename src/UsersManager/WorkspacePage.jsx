@@ -159,16 +159,45 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     // Trigger live GenAI chat
     setIsAiTyping(true);
     try {
-      const aiResponseText = await getSocraticChatCompletion(newMessages, currentPhase, activeProject?.canvasData || {});
+      let aiResponseText = await getSocraticChatCompletion(newMessages, currentPhase, activeProject?.canvasData || {});
+      
+      let shouldUnlockNext = false;
+      if (aiResponseText.includes('[UNLOCK_NEXT_PHASE]')) {
+        shouldUnlockNext = true;
+        aiResponseText = aiResponseText.replace('[UNLOCK_NEXT_PHASE]', '').trim();
+      }
+
       const aiMsg = createChatMessage("ai", aiResponseText);
       const finalMessages = [...newMessages, aiMsg];
       
+      let updatedUnlockedPhases = activeProject.unlockedPhases || ['empathize'];
+      if (shouldUnlockNext) {
+        const PHASE_ORDER = ["empathize", "define", "ideate", "prototype", "test"];
+        const currIdx = PHASE_ORDER.indexOf(currentPhase);
+        if (currIdx !== -1 && currIdx < PHASE_ORDER.length - 1) {
+          const nextPhase = PHASE_ORDER[currIdx + 1];
+          if (!updatedUnlockedPhases.includes(nextPhase)) {
+            updatedUnlockedPhases = [...updatedUnlockedPhases, nextPhase];
+            // Show toast notification using a simple alert or console for now, 
+            // since we don't have a toast library explicitly in scope. A browser alert works for a prototype.
+            alert(`🎉 Congratulations! You've unlocked the ${nextPhase.toUpperCase()} phase!`);
+          }
+        }
+      }
+
       // Optimistic local update
       setMessages(finalMessages);
-      setActiveProject(prev => ({ ...prev, messages: finalMessages }));
+      setActiveProject(prev => ({ 
+        ...prev, 
+        messages: finalMessages,
+        unlockedPhases: updatedUnlockedPhases
+      }));
       
-      // Transmit AI msg array to DB
-      await apiService.updateProject(activeProject.id, { messages: finalMessages });
+      // Transmit AI msg array and potential phase unlock to DB
+      await apiService.updateProject(activeProject.id, { 
+        messages: finalMessages,
+        unlockedPhases: updatedUnlockedPhases
+      });
     } catch (err) {
       console.error("[Socratic Chatbot] Error generating AI response:", err);
     } finally {
@@ -502,7 +531,11 @@ export default function WorkspacePage({ theme, toggleTheme }) {
           </div>
 
           {/* HORIZONTAL PHASE STEPPER (Top Bar) */}
-          <PhaseStepper currentPhase={currentPhase} setCurrentPhase={handlePhaseChange} />
+          <PhaseStepper 
+            currentPhase={currentPhase} 
+            setCurrentPhase={handlePhaseChange} 
+            unlockedPhases={activeProject?.unlockedPhases || ['empathize']} 
+          />
 
           {/* CENTRAL SPLIT VIEW */}
           <div className="flex flex-1 overflow-hidden flex-row relative">

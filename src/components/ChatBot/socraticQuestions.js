@@ -3,34 +3,29 @@
 
 export const SOCRATIC_PROMPTS = {
   empathize: [
-    "What did you observe that surprised you most during your user interactions?",
-    "How might we look at the problem from the perspective of a user who is completely unfamiliar with this system?",
-    "What are the emotional pain points your users expressed that go beyond just functional needs?",
-    "If you could only solve one frustration for your user, which one would it be and why?"
+    "This persona lacks socioeconomic context. What is this user's financial situation? Do they work while studying?",
+    "What technology do they already use daily? How does their cultural background influence their conduct?",
+    "Have we missed any key stakeholder groups in this empathy map? What data do we have to support these user needs?"
   ],
   define: [
-    "Why does the user feel this way? What are the underlying insights behind their primary needs?",
-    "Is your POV statement too broad or too narrow? How can we refine it to focus on a single key insight?",
-    "What assumptions are you making about the user's root cause, and how can we challenge them?",
-    "How does your problem statement inspire new brainstorming directions?"
+    "You’ve identified multiple values here. Let’s map these: Which stakeholder values which outcome most?",
+    "If users had to choose between privacy and social connection, what would they prioritize, according to your data?",
+    "You are stating a solution rather than a problem. How can we ground this problem definition strictly in the research?"
   ],
   ideate: [
-    "How can we push this solution to the absolute extreme? What would a wild, budget-free version look like?",
-    "What would the opposite of your current idea be, and is there any value in that reversed perspective?",
-    "How could you combine two of your digital sticky notes to form a hybrid, stronger solution?",
-    "What is the simplest, most elegant version of this idea that could be built in one afternoon?"
+    "That’s an interesting start. Let’s build on this: What if we also added a completely wild, budget-free variation?",
+    "Thinking completely differently, what if instead of the obvious solution, we explored the exact opposite? Your turn—take any of these in a new direction.",
+    "Let's play ping-pong with ideas! I'll suggest a crazy feature, and you build on it without criticizing it."
   ],
   prototype: [
-    "What is the single most critical assumption this low-fidelity prototype needs to test first?",
-    "How can we make this mockup even simpler so that users focus entirely on the core interaction?",
-    "What materials or low-fi wires best represent the user flow without getting bogged down in visual details?",
-    "How does this interactive mockup address the emotional needs identified in your Define phase?"
+    "Let's map these ideas on two axes: innovation potential (low/medium/high) and implementation complexity (low/medium/high).",
+    "I’m simulating a busy parent encountering your 5-step onboarding—likely drop-off at step 3. How do we fix this?",
+    "Simulating your IT stakeholder: There are GDPR compliance concerns for storing images here. Should we explore alternative methods?"
   ],
   test: [
-    "What did the user do during testing that was completely different from what you expected?",
-    "Based on the negative feedback, what is the most important structural adjustment we should make next?",
-    "What questions did your test user raise that you didn't have answers for?",
-    "How did the user's behavior validate or invalidate your initial POV statement?"
+    "Let’s dig deeper. I’ll facilitate: 'Can you walk me through using this for your actual workflow? Where would you access this during your day?'",
+    "If a stakeholder gave vague feedback like 'It's fine', what open-ended question would you ask to draw out a vivid story?",
+    "What would make the user choose this over their current solution? Let's analyze the pros and cons based on the feedback."
   ]
 };
 

@@ -10,7 +10,15 @@ const projectSchema = new mongoose.Schema({
   studentId: { type: String, required: true },
   challengeId: { type: String, required: true },
   name: { type: String, default: 'Untitled Project' },
-  currentPhase: { type: String, default: 'Empathize' },
+  currentPhase: {
+    type: String,
+    enum: ['empathize', 'define', 'ideate', 'prototype', 'test'],
+    default: 'empathize'
+  },
+  unlockedPhases: {
+    type: [String],
+    default: ['empathize']
+  },
   progressPercentage: { type: Number, default: 0 },
   canvasData: { type: mongoose.Schema.Types.Mixed, default: {} },
   messages: [messageSchema],
