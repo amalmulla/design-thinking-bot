@@ -18,6 +18,7 @@ import { exportProjectJSON, exportProjectMarkdown, exportProjectPDF } from "../l
 // Modular Workspace Components
 import PhaseStepper from "../components/ProgressTracker/PhaseStepper";
 import ChatPanel from "../components/ChatBot/ChatPanel";
+import TeamChatDrawer from "../components/ChatBot/TeamChatDrawer";
 import EmpathyMapCanvas from "../components/PersonaBuilder/EmpathyMapCanvas";
 import POVDefineCanvas from "../components/DesignCanvas/POVDefineCanvas";
 import IdeationStickyNotes from "../components/IdeationBoard/IdeationStickyNotes";
@@ -38,6 +39,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
 
   // Team collaboration modal state
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+  const [isTeamChatOpen, setIsTeamChatOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [teamError, setTeamError] = useState("");
   const [teamBusy, setTeamBusy] = useState(false);
@@ -508,6 +510,18 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               )}
             </Button>
           )}
+          {!isReadOnly && activeProject && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTeamChatOpen(true)}
+              className="h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              title="Team chat"
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Team Chat</span>
+            </Button>
+          )}
         </div>
       </Header>
 
@@ -842,6 +856,16 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Team chat drawer (collaborator-to-collaborator messaging) */}
+      {!isReadOnly && activeProject && (
+        <TeamChatDrawer
+          isOpen={isTeamChatOpen}
+          onClose={() => setIsTeamChatOpen(false)}
+          projectId={activeProject.id}
+          currentUserId={currentUser?.id}
+        />
       )}
 
     </div>

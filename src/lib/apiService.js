@@ -65,6 +65,12 @@ export const apiService = {
   removeProjectMember: (id, userId) => fetchApi(`/api/projects/${id}/members/${userId}`, {
     method: 'DELETE',
   }),
+  // Team chat: fetch history (polled) / post a message between collaborators
+  getTeamMessages: (id) => fetchApi(`/api/projects/${id}/team-messages`),
+  sendTeamMessage: (id, content) => fetchApi(`/api/projects/${id}/team-messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  }),
 
   // Challenges
   getChallenges: (teacherId) => fetchApi(teacherId ? `/api/challenges?teacherId=${teacherId}` : '/api/challenges'),
