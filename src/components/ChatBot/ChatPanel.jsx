@@ -102,9 +102,20 @@ export default function ChatPanel({
   isReadOnly,
   isAiTyping = false,
   onExportProject,
-  canExportChat = false
+  canExportChat = false,
+  currentUserId = null
 }) {
   const scrollRef = useRef(null);
+
+  // Two-letter initials for a teammate's avatar (falls back to "ME").
+  const initialsOf = (name) =>
+    (name || "")
+      .split(" ")
+      .map((p) => p[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "ME";
 
   // Auto-scroll chat natively
   useEffect(() => {
@@ -153,7 +164,13 @@ export default function ChatPanel({
           </div>
         ) : (
           <div className="space-y-6 pb-4">
-            {messages.map((msg, i) => (
+            {messages.map((msg, i) => {
+              // A user message authored by a teammate (not the viewer) is labelled with their name.
+              const isOwnMessage = !msg.authorId || msg.authorId === currentUserId;
+              const senderLabel = msg.role === "ai"
+                ? "Design AI"
+                : (isOwnMessage ? "You" : (msg.authorName || "Teammate"));
+              return (
               <div key={i} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                 <Avatar className={`h-8 w-8 shrink-0 ${msg.role === "ai" ? "border border-zinc-200 dark:border-zinc-800" : ""}`}>
                   {msg.role === "ai" ? (
@@ -161,12 +178,12 @@ export default function ChatPanel({
                       <Bot className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     </div>
                   ) : (
-                    <AvatarFallback className="bg-zinc-200 dark:bg-zinc-800 text-xs text-zinc-850 dark:text-white">ME</AvatarFallback>
+                    <AvatarFallback className="bg-zinc-200 dark:bg-zinc-800 text-xs text-zinc-850 dark:text-white">{isOwnMessage ? "ME" : initialsOf(msg.authorName)}</AvatarFallback>
                   )}
                 </Avatar>
                 <div className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"} max-w-[85%]`}>
                   <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-600 mb-1 px-1 uppercase tracking-wider select-none">
-                    {msg.role === "user" ? "You" : "Design AI"}
+                    {senderLabel}
                   </span>
                   <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                     msg.role === "user" 
@@ -183,7 +200,8 @@ export default function ChatPanel({
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {/* Bouncing Typing Dots Loader */}
             {isAiTyping && (

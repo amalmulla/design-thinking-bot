@@ -89,16 +89,19 @@ export function createDesignChallenge(title, description = "", status = "Active"
 
 /**
  * Creates a new ChatMessage object.
- * @param {string} role 
- * @param {string} content 
+ * @param {string} role
+ * @param {string} content
+ * @param {{id?: string, name?: string}} [author] - The teammate who sent a 'user' message (omit for AI).
  * @returns {ChatMessage}
  */
-export function createChatMessage(role, content) {
+export function createChatMessage(role, content, author = null) {
   return {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
     role,
     content,
-    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    // Stamp authorship on user messages so collaborators can see who said what.
+    ...(author ? { authorId: author.id, authorName: author.name } : {})
   };
 }
 

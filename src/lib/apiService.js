@@ -57,6 +57,14 @@ export const apiService = {
   deleteProject: (id) => fetchApi(`/api/projects/${id}`, {
     method: 'DELETE',
   }),
+  // Collaboration: invite a teammate by email / remove a teammate (or leave) from a project
+  addProjectMember: (id, email) => fetchApi(`/api/projects/${id}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  }),
+  removeProjectMember: (id, userId) => fetchApi(`/api/projects/${id}/members/${userId}`, {
+    method: 'DELETE',
+  }),
 
   // Challenges
   getChallenges: (teacherId) => fetchApi(teacherId ? `/api/challenges?teacherId=${teacherId}` : '/api/challenges'),

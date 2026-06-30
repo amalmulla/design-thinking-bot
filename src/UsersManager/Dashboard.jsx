@@ -15,6 +15,8 @@ import {
   Search,
   Filter,
   ChevronRight,
+  ChevronDown,
+  Crown,
   UserCheck,
   GraduationCap,
   Trash2
@@ -83,12 +85,19 @@ export default function Dashboard({ theme, toggleTheme }) {
 
         // Normalize _id to id and name to title so we don't have to rewrite the entire UI template
         const normalizedChallenges = (fetchedChallenges || []).map(c => ({ ...c, id: c._id || c.id }));
-        const normalizedProjects = (fetchedProjects || []).map(p => ({
-          ...p,
-          id: p._id || p.id,
-          title: p.name || p.title || 'Untitled Project',
-          currentPhase: p.currentPhase?.toLowerCase() || 'empathize'
-        }));
+        const normalizedProjects = (fetchedProjects || []).map(p => {
+          const memberCount = Array.isArray(p.members) ? p.members.length : 0;
+          return {
+            ...p,
+            id: p._id || p.id,
+            title: p.name || p.title || 'Untitled Project',
+            currentPhase: p.currentPhase?.toLowerCase() || 'empathize',
+            // Owner's real name (resolved by the backend); keep any legacy field as fallback.
+            studentOrTeamName: p.studentName || p.studentOrTeamName || null,
+            memberCount,
+            teamworkStatus: memberCount > 0 ? 'Team' : 'Solo',
+          };
+        });
 
         setChallenges(normalizedChallenges);
         setStudentProjects(normalizedProjects);
@@ -122,6 +131,8 @@ export default function Dashboard({ theme, toggleTheme }) {
   const [newDesc, setNewDesc] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState("All");
+  // Which project's team roster is expanded in the teacher table (one open at a time).
+  const [expandedTeamId, setExpandedTeamId] = useState(null);
 
   // Student Actions
   // When a student picks a teacher, load only that teacher's challenges into the picker.
@@ -231,7 +242,7 @@ export default function Dashboard({ theme, toggleTheme }) {
   }, [challenges]);
 
   const filteredTeacherProjects = studentProjects.filter(p => {
-    const nameToMatch = p.studentOrTeamName || "";
+    const nameToMatch = [p.studentOrTeamName || "", ...(p.memberNames || [])].join(" ");
     const titleToMatch = p.projectTitle || p.title || "";
     const matchesSearch = nameToMatch.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           titleToMatch.toLowerCase().includes(searchTerm.toLowerCase());
@@ -244,7 +255,10 @@ export default function Dashboard({ theme, toggleTheme }) {
     ? Math.round(studentProjects.reduce((acc, p) => acc + (p.progressPercentage || 0), 0) / studentProjects.length) + "%" 
     : "0%";
   const needsReviewCount = studentProjects.filter(p => p.currentPhase === 'test' || p.creativityScore === 'Needs Focus').length;
-  const activeStudentsCount = new Set(studentProjects.map(p => p.studentId).filter(Boolean)).size;
+  // Count every distinct participant — project owners (studentId) AND invited collaborators (members).
+  const activeStudentsCount = new Set(
+    studentProjects.flatMap(p => [p.studentId, ...(p.members || [])]).filter(Boolean)
+  ).size;
 
   const renderStatusBadge = (value, type) => {
     let colorClass = "bg-zinc-800 text-zinc-300 border-zinc-700";
@@ -254,6 +268,7 @@ export default function Dashboard({ theme, toggleTheme }) {
     }
     if (type === 'teamwork') {
       if (value === 'Excellent') colorClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+      if (value === 'Team') colorClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
       if (value === 'Needs Work') colorClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
       if (value === 'Solo') colorClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
     }
@@ -440,7 +455,19 @@ export default function Dashboard({ theme, toggleTheme }) {
 
                         return (
                           <TableRow key={project.id} className="border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30">
-                            <TableCell className="font-medium text-zinc-800 dark:text-zinc-200">{project.studentOrTeamName || "Student"}</TableCell>
+                            <TableCell className="font-medium text-zinc-800 dark:text-zinc-200">
+                              <div className="flex items-center gap-1.5">
+                                <span>{project.studentOrTeamName || "Student"}</span>
+                                {project.memberCount > 0 && (
+                                  <span
+                                    title={(project.memberNames || []).join(', ')}
+                                    className="inline-flex items-center gap-0.5 text-xs font-medium text-blue-500 dark:text-blue-400"
+                                  >
+                                    <Users className="h-3 w-3" />+{project.memberCount}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell className="text-zinc-700 dark:text-zinc-300 font-medium">{project.title || project.projectTitle || "Untitled Project"}</TableCell>
                             <TableCell className="text-zinc-600 dark:text-zinc-400 text-sm hidden md:table-cell">{challengeTitleById[project.challengeId] || <span className="text-zinc-400 dark:text-zinc-600 italic">Unassigned</span>}</TableCell>
                             <TableCell>
@@ -452,7 +479,44 @@ export default function Dashboard({ theme, toggleTheme }) {
                               </div>
                             </TableCell>
                             <TableCell className="hidden md:table-cell">{renderStatusBadge(project.creativityScore || "Not Evaluated", 'creativity')}</TableCell>
-                            <TableCell className="hidden md:table-cell">{renderStatusBadge(project.teamworkStatus || "Solo", 'teamwork')}</TableCell>
+                            <TableCell className="hidden md:table-cell align-top">
+                              {project.memberCount > 0 ? (
+                                <div className="space-y-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedTeamId(expandedTeamId === project.id ? null : project.id)}
+                                    className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                                  >
+                                    <Users className="h-3 w-3" />
+                                    Team ({project.memberCount + 1})
+                                    <ChevronDown className={`h-3 w-3 transition-transform ${expandedTeamId === project.id ? 'rotate-180' : ''}`} />
+                                  </button>
+                                  {expandedTeamId === project.id && (
+                                    <div className="w-44 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-1 text-xs shadow-sm">
+                                      <div className="flex items-center gap-1.5 px-2 py-1 text-zinc-700 dark:text-zinc-200">
+                                        <Crown className="h-3 w-3 shrink-0 text-amber-500" />
+                                        <span className="truncate">{project.studentOrTeamName || "Student"}</span>
+                                        <span className="ml-auto text-[10px] uppercase tracking-wide text-zinc-400">owner</span>
+                                      </div>
+                                      {(project.memberNames || []).map((name, i) => {
+                                        const isMatch = searchTerm && name.toLowerCase().includes(searchTerm.toLowerCase());
+                                        return (
+                                          <div
+                                            key={i}
+                                            className={`flex items-center gap-1.5 px-2 py-1 rounded ${isMatch ? 'bg-blue-500/10 font-medium text-blue-500 dark:text-blue-400' : 'text-zinc-600 dark:text-zinc-300'}`}
+                                          >
+                                            <Users className="h-3 w-3 shrink-0 opacity-60" />
+                                            <span className="truncate">{name}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                renderStatusBadge("Solo", 'teamwork')
+                              )}
+                            </TableCell>
                             <TableCell className="text-xs text-zinc-400 hidden lg:table-cell">{project.lastUpdated || project.lastActiveDate || "Recently"}</TableCell>
                             <TableCell className="text-right">
                               <Button 
@@ -509,6 +573,19 @@ export default function Dashboard({ theme, toggleTheme }) {
                         </div>
                       )}
 
+                      {/* Collaboration context: shared-with-you vs. a team you own */}
+                      {activeRecentProject.studentId?.toString() !== currentUser?.id?.toString() ? (
+                        <div className="flex items-center text-xs text-blue-500 dark:text-blue-400 mb-2 gap-1.5 font-medium">
+                          <Users className="h-3.5 w-3.5" />
+                          Shared by {activeRecentProject.studentName || "a teammate"}
+                        </div>
+                      ) : (activeRecentProject.memberNames?.length > 0 && (
+                        <div className="flex items-center text-xs text-zinc-500 mb-2 gap-1.5">
+                          <Users className="h-3.5 w-3.5" />
+                          Team: you + {activeRecentProject.memberNames.length} {activeRecentProject.memberNames.length === 1 ? 'collaborator' : 'collaborators'}
+                        </div>
+                      ))}
+
                       <h3 className="text-2xl font-bold text-zinc-800 dark:text-zinc-100 mb-6 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {activeRecentProject.title}
                       </h3>
@@ -534,14 +611,16 @@ export default function Dashboard({ theme, toggleTheme }) {
                           Continue Working
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setProjectToDelete(activeRecentProject.id)}
-                          className="border-rose-200 dark:border-rose-800 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-600 transition-colors cursor-pointer px-3"
-                          title="Delete Project"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {activeRecentProject.studentId?.toString() === currentUser?.id?.toString() && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setProjectToDelete(activeRecentProject.id)}
+                            className="border-rose-200 dark:border-rose-800 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-600 transition-colors cursor-pointer px-3"
+                            title="Delete Project"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -578,16 +657,18 @@ export default function Dashboard({ theme, toggleTheme }) {
                           {project.title}
                         </CardTitle>
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setProjectToDelete(project.id);
-                            }}
-                            className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
-                            title="Delete Project"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {project.studentId?.toString() === currentUser?.id?.toString() && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProjectToDelete(project.id);
+                              }}
+                              className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
+                              title="Delete Project"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                           <div className={`p-2 rounded-lg shrink-0 ${PhaseData.bg}`}>
                             <Icon className={`h-5 w-5 ${PhaseData.color}`} />
                           </div>
@@ -596,10 +677,19 @@ export default function Dashboard({ theme, toggleTheme }) {
                     </CardHeader>
                     
                     <CardContent className="py-5 flex-1 space-y-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className={`text-[10px] uppercase tracking-wider font-semibold border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-950/50`}>
                           {PhaseData.label}
                         </Badge>
+                        {project.studentId?.toString() !== currentUser?.id?.toString() ? (
+                          <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold border-blue-300/40 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 gap-1">
+                            <Users className="h-3 w-3" /> Shared
+                          </Badge>
+                        ) : (project.memberNames?.length > 0 && (
+                          <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-950/50 gap-1">
+                            <Users className="h-3 w-3" /> Team
+                          </Badge>
+                        ))}
                       </div>
 
                       {project.teacherName && (
