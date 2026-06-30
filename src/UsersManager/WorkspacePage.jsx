@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Star, ArrowLeft, Menu, MessageSquare, LayoutTemplate, X, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Search, Star, ArrowLeft, Menu, MessageSquare, LayoutTemplate, X, Trash2, AlertCircle, Users, UserPlus, LogOut, Crown } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 // Standard shadcn/ui style components
@@ -30,9 +30,20 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
+  const currentUser = usersService.getCurrentUser();
+
   const [studentProjects, setStudentProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Team collaboration modal state
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [teamError, setTeamError] = useState("");
+  const [teamBusy, setTeamBusy] = useState(false);
+
+  // The current viewer owns the active project (only the owner can manage the team / delete).
+  const isProjectOwner = activeProject && currentUser && activeProject.studentId?.toString() === currentUser.id?.toString();
 
   const [currentPhase, setCurrentPhase] = useState("empathize");
   const [messages, setMessages] = useState([]);
@@ -145,10 +156,56 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     }
   };
 
+  // Sync the active project's team fields from a server response (after invite/remove).
+  const applyTeamUpdate = (updated) => {
+    setActiveProject(prev => prev ? {
+      ...prev,
+      members: updated.members || [],
+      memberNames: updated.memberNames || [],
+      memberList: updated.memberList || [],
+    } : prev);
+  };
+
+  const handleInviteMember = async () => {
+    const email = inviteEmail.trim();
+    if (!email || !activeProject) return;
+    setTeamBusy(true);
+    setTeamError("");
+    try {
+      const updated = await apiService.addProjectMember(activeProject.id, email);
+      applyTeamUpdate(updated);
+      setInviteEmail("");
+    } catch (err) {
+      setTeamError(err.message || "Failed to add collaborator.");
+    } finally {
+      setTeamBusy(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId) => {
+    if (!activeProject) return;
+    const leaving = userId === currentUser?.id;
+    setTeamBusy(true);
+    setTeamError("");
+    try {
+      const updated = await apiService.removeProjectMember(activeProject.id, userId);
+      if (leaving) {
+        // A collaborator who removed themselves loses access — send them home.
+        navigate('/dashboard');
+        return;
+      }
+      applyTeamUpdate(updated);
+    } catch (err) {
+      setTeamError(err.message || "Failed to remove collaborator.");
+    } finally {
+      setTeamBusy(false);
+    }
+  };
+
   const handleSendMessage = async (text) => {
     if (!text.trim() || !activeProject || isReadOnly || isAiTyping) return;
     
-    const userMsg = createChatMessage("user", text);
+    const userMsg = createChatMessage("user", text, { id: currentUser?.id, name: currentUser?.name });
     const newMessages = [...messages, userMsg];
     
     // Optimistic local update
@@ -434,6 +491,23 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               Review Mode (Read-Only)
             </Badge>
           )}
+          {!isReadOnly && activeProject && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setTeamError(""); setIsTeamModalOpen(true); }}
+              className="ml-2 h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              title="Manage team"
+            >
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Team</span>
+              {((activeProject.members?.length || 0) + 1) > 1 && (
+                <span className="ml-0.5 text-xs font-semibold rounded-full bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 leading-none">
+                  {(activeProject.members?.length || 0) + 1}
+                </span>
+              )}
+            </Button>
+          )}
         </div>
       </Header>
 
@@ -502,8 +576,12 @@ export default function WorkspacePage({ theme, toggleTheme }) {
                 >
                   <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate pr-2 flex-1">{project.title}</span>
                   <div className="flex items-center gap-1 shrink-0">
+                    {/* Projects the student was invited to (not the owner) are flagged as shared */}
+                    {project.studentId?.toString() !== currentUser?.id?.toString() && (
+                      <Users className="h-3.5 w-3.5 text-blue-500/70" title="Shared with you" />
+                    )}
                     {project.isRecent && <Star className="h-3.5 w-3.5 text-yellow-500/70 fill-yellow-500/20" />}
-                    {!isReadOnly && (
+                    {!isReadOnly && project.studentId?.toString() === currentUser?.id?.toString() && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -565,6 +643,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
                 isAiTyping={isAiTyping}
                 onExportProject={handleExportProjectClick}
                 canExportChat={isReadOnly}
+                currentUserId={currentUser?.id}
               />
             </div>
 
@@ -641,6 +720,99 @@ export default function WorkspacePage({ theme, toggleTheme }) {
           </div>
         </div>
       )}
+
+      {/* TEAM / COLLABORATION MODAL */}
+      {isTeamModalOpen && activeProject && (() => {
+        const memberRows = activeProject.memberList
+          || (activeProject.members || []).map((id, i) => ({ id, name: (activeProject.memberNames || [])[i] || 'Unknown' }));
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-500" />
+                  Project Team
+                </h3>
+                <Button variant="ghost" size="icon" onClick={() => setIsTeamModalOpen(false)} className="text-zinc-500 h-8 w-8">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
+                Collaborators can co-edit the canvases and chat on this project.
+              </p>
+
+              {/* Member list */}
+              <div className="space-y-2 mb-5 max-h-56 overflow-y-auto">
+                {/* Owner row */}
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Crown className="h-4 w-4 text-amber-500 shrink-0" />
+                    <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                      {activeProject.studentName || "Owner"}
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] uppercase tracking-wider text-amber-600 border-amber-300/40 bg-amber-50 dark:bg-amber-950/30">
+                    Owner
+                  </Badge>
+                </div>
+
+                {/* Collaborators */}
+                {memberRows.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800">
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate pr-2">{m.name}</span>
+                    {(isProjectOwner || m.id === currentUser?.id) && (
+                      <button
+                        onClick={() => handleRemoveMember(m.id)}
+                        disabled={teamBusy}
+                        className="p-1 text-zinc-400 hover:text-rose-500 transition-colors cursor-pointer disabled:opacity-50"
+                        title={m.id === currentUser?.id ? "Leave project" : "Remove collaborator"}
+                      >
+                        {m.id === currentUser?.id ? <LogOut className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {memberRows.length === 0 && (
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 italic px-1 py-2 select-none">
+                    No collaborators yet. {isProjectOwner ? "Invite a teammate by email below." : "Only the owner can invite teammates."}
+                  </p>
+                )}
+              </div>
+
+              {/* Invite form (owner only) */}
+              {isProjectOwner && (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">
+                    Invite a teammate
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleInviteMember()}
+                      placeholder="student@email.com"
+                      className="flex-1 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus-visible:ring-blue-500 h-10"
+                    />
+                    <Button
+                      onClick={handleInviteMember}
+                      disabled={teamBusy || !inviteEmail.trim()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed gap-1.5"
+                    >
+                      <UserPlus className="h-4 w-4" /> Add
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {teamError && (
+                <p className="text-xs text-rose-500 font-medium mt-3">{teamError}</p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* DELETE CONFIRMATION MODAL */}
       {projectToDelete && (
