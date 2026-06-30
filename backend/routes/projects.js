@@ -285,4 +285,60 @@ router.delete('/:id/members/:userId', async (req, res) => {
   }
 });
 
+// --- Team chat (human-to-human messages between collaborators) ---
+
+// Fetch the team chat history. Polled by the client while the chat drawer is open.
+router.get('/:id/team-messages', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+    const project = await Project.findById(id).select('studentId members teamMessages');
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ message: 'You do not have access to this project.' });
+    }
+    res.status(200).json(project.teamMessages || []);
+  } catch (error) {
+    console.error('Error fetching team messages:', error);
+    res.status(500).json({ message: 'Server error fetching team messages' });
+  }
+});
+
+// Post a team chat message. Author is taken from the auth token (not the client) to prevent spoofing.
+router.post('/:id/team-messages', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const content = (req.body.content || '').trim().slice(0, 2000);
+    if (!content) {
+      return res.status(400).json({ message: 'Message content is required.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ message: 'You do not have access to this project.' });
+    }
+
+    project.teamMessages.push({
+      authorId: req.user.id?.toString(),
+      authorName: req.user.name || 'Unknown',
+      content,
+    });
+    await project.save();
+
+    res.status(201).json(project.teamMessages);
+  } catch (error) {
+    console.error('Error sending team message:', error);
+    res.status(500).json({ message: 'Server error sending team message' });
+  }
+});
+
 module.exports = router;
