@@ -46,7 +46,6 @@ import {
 
 // --- MOCK DATA ---
 import { PROJECT_DATA, ACTIVE_CHALLENGES, STUDENT_PROJECTS } from "../data/challenges";
-import { CLASS_METRICS } from "../lib/analytics";
 import { createStudentProject, createDesignChallenge } from "../lib/dataModels";
 import { usersService } from "./usersService";
 import { apiService } from "../lib/apiService";
@@ -84,7 +83,12 @@ export default function Dashboard({ theme, toggleTheme }) {
         ]);
 
         // Normalize _id to id and name to title so we don't have to rewrite the entire UI template
-        const normalizedChallenges = (fetchedChallenges || []).map(c => ({ ...c, id: c._id || c.id }));
+        const normalizedChallenges = (fetchedChallenges || []).map(c => {
+          const id = c._id || c.id;
+          const teamCount = (fetchedProjects || []).filter(p => p.challengeId === id).length;
+          const status = teamCount > 0 ? "Active" : "Inactive";
+          return { ...c, id, teamCount, status };
+        });
         const normalizedProjects = (fetchedProjects || []).map(p => {
           const memberCount = Array.isArray(p.members) ? p.members.length : 0;
           return {
@@ -129,6 +133,7 @@ export default function Dashboard({ theme, toggleTheme }) {
 
   // Teacher Modal Inputs & States
   const [newDesc, setNewDesc] = useState("");
+  const [editingChallengeId, setEditingChallengeId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState("All");
   // Which project's team roster is expanded in the teacher table (one open at a time).
@@ -211,20 +216,45 @@ export default function Dashboard({ theme, toggleTheme }) {
   const handleSaveChallenge = async () => {
     if (!newTitle.trim()) return;
     try {
-      const newChallengeRaw = await apiService.createChallenge({
-        title: newTitle.trim(),
-        description: newDesc.trim(),
-        createdByTeacherId: currentUser?.id
-      });
-      
-      const newChallenge = { ...newChallengeRaw, id: newChallengeRaw._id || newChallengeRaw.id };
-      setChallenges([...challenges, newChallenge]);
+      if (editingChallengeId) {
+        const updatedRaw = await apiService.updateChallenge(editingChallengeId, {
+          title: newTitle.trim(),
+          description: newDesc.trim()
+        });
+        const updatedChallenge = { ...updatedRaw, id: updatedRaw._id || updatedRaw.id };
+        setChallenges(challenges.map(c => c.id === editingChallengeId ? updatedChallenge : c));
+      } else {
+        const newChallengeRaw = await apiService.createChallenge({
+          title: newTitle.trim(),
+          description: newDesc.trim(),
+          createdByTeacherId: currentUser?.id
+        });
+        
+        const newChallenge = { ...newChallengeRaw, id: newChallengeRaw._id || newChallengeRaw.id };
+        setChallenges([...challenges, newChallenge]);
+      }
       
       setNewTitle("");
       setNewDesc("");
+      setEditingChallengeId(null);
       setIsModalOpen(false);
     } catch (err) {
       console.error("Failed to save challenge:", err);
+    }
+  };
+
+  const handleDeleteChallenge = async () => {
+    if (!editingChallengeId) return;
+    try {
+      await apiService.deleteChallenge(editingChallengeId);
+      setChallenges(challenges.filter(c => c.id !== editingChallengeId));
+      setIsModalOpen(false);
+      setEditingChallengeId(null);
+      setNewTitle("");
+      setNewDesc("");
+    } catch (err) {
+      console.error("Failed to delete challenge:", err);
+      alert("Failed to delete challenge.");
     }
   };
 
@@ -254,7 +284,7 @@ export default function Dashboard({ theme, toggleTheme }) {
   const avgCompletionValue = studentProjects.length 
     ? Math.round(studentProjects.reduce((acc, p) => acc + (p.progressPercentage || 0), 0) / studentProjects.length) + "%" 
     : "0%";
-  const needsReviewCount = studentProjects.filter(p => p.currentPhase === 'test' || p.creativityScore === 'Needs Focus').length;
+  const needsReviewCount = studentProjects.filter(p => p.needsTeacherReview).length;
   // Count every distinct participant — project owners (studentId) AND invited collaborators (members).
   const activeStudentsCount = new Set(
     studentProjects.flatMap(p => [p.studentId, ...(p.members || [])]).filter(Boolean)
@@ -353,7 +383,12 @@ export default function Dashboard({ theme, toggleTheme }) {
                   Active Design Challenges
                 </h3>
                 <Button 
-                  onClick={() => setIsModalOpen(true)} 
+                  onClick={() => {
+                    setNewTitle("");
+                    setNewDesc("");
+                    setEditingChallengeId(null);
+                    setIsModalOpen(true);
+                  }} 
                   size="sm" 
                   className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-medium transition-colors cursor-pointer"
                 >
@@ -370,7 +405,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                         <h4 className="font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
                           {challenge.title}
                         </h4>
-                        <Badge variant="outline" className={`text-[10px] uppercase shrink-0 ${challenge.status === 'Active' ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/10' : 'text-orange-500 border-orange-500/20 bg-orange-500/10'}`}>
+                        <Badge variant="outline" className={`text-[10px] uppercase shrink-0 ${challenge.status === 'Active' ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/10' : 'text-zinc-500 border-zinc-500/20 bg-zinc-500/10'}`}>
                           {challenge.status}
                         </Badge>
                       </div>
@@ -379,7 +414,12 @@ export default function Dashboard({ theme, toggleTheme }) {
                           <Users className="h-4 w-4" /> {challenge.teamCount} Teams
                         </span>
                         <button 
-                          onClick={() => setIsModalOpen(true)}
+                          onClick={() => {
+                            setNewTitle(challenge.title);
+                            setNewDesc(challenge.description || "");
+                            setEditingChallengeId(challenge.id);
+                            setIsModalOpen(true);
+                          }}
                           className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-xs font-medium flex items-center cursor-pointer"
                         >
                           Manage <ChevronRight className="h-3 w-3 ml-0.5" />
@@ -520,10 +560,20 @@ export default function Dashboard({ theme, toggleTheme }) {
                             <TableCell className="text-xs text-zinc-400 hidden lg:table-cell">{project.lastUpdated || project.lastActiveDate || "Recently"}</TableCell>
                             <TableCell className="text-right">
                               <Button 
-                                onClick={() => navigate(`/teacher/review/${project.id}`)}
+                                onClick={async () => {
+                                  if (project.needsTeacherReview) {
+                                    try {
+                                      await apiService.updateProject(project.id, { needsTeacherReview: false });
+                                    } catch(e) {}
+                                  }
+                                  navigate(`/teacher/review/${project.id}`);
+                                }}
                                 size="sm" 
-                                variant="outline" 
-                                className="bg-transparent border-zinc-300 dark:border-zinc-700 text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                                variant={project.needsTeacherReview ? "default" : "outline"} 
+                                className={project.needsTeacherReview 
+                                  ? "bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold border-amber-500 cursor-pointer shadow-sm" 
+                                  : "bg-transparent border-zinc-300 dark:border-zinc-700 text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                                }
                               >
                                 Review
                                 <ChevronRight className="h-3 w-3 ml-1" />
@@ -744,7 +794,7 @@ export default function Dashboard({ theme, toggleTheme }) {
             <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex justify-between items-center select-none">
               <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
                 {isTeacher ? <Target className="h-5 w-5 text-indigo-500" /> : <Brain className="h-5 w-5 text-pink-500" />}
-                {isTeacher ? "Manage Design Challenge" : "Start New Project"}
+                {isTeacher ? (editingChallengeId ? "Edit Design Challenge" : "New Design Challenge") : "Start New Project"}
               </h3>
             </div>
             
@@ -820,11 +870,25 @@ export default function Dashboard({ theme, toggleTheme }) {
               )}
             </div>
 
-            <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex justify-end gap-3">
+            <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex items-center justify-end gap-3">
+              {isTeacher && editingChallengeId && (() => {
+                const ec = challenges.find(c => c.id === editingChallengeId);
+                return ec && ec.teamCount === 0;
+              })() && (
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteChallenge}
+                  className="mr-auto cursor-pointer"
+                >
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Delete Challenge
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 onClick={() => {
                   setNewDesc("");
+                  setEditingChallengeId(null);
                   resetProjectModal();
                 }}
                 className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 h-9"
@@ -836,7 +900,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                 disabled={!newTitle.trim() || (!isTeacher && !selectedChallengeId)}
                 className={`${isTeacher ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'} text-white shadow-sm h-9 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                {isTeacher ? "Save Challenge" : "Launch Project"}
+                {isTeacher ? (editingChallengeId ? "Save Changes" : "Save Challenge") : "Launch Project"}
               </Button>
             </div>
           </div>

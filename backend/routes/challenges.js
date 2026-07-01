@@ -55,4 +55,18 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedChallenge = await Challenge.findByIdAndDelete(id);
+    if (!deletedChallenge) {
+      return res.status(404).json({ message: 'Challenge not found.' });
+    }
+    res.status(200).json({ message: 'Challenge deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting challenge:', error);
+    res.status(500).json({ message: 'Server error deleting challenge' });
+  }
+});
+
 module.exports = router;

@@ -26,8 +26,15 @@ function getNextPhase(phase) {
  * @param {Object} canvasData - The project's full canvasData object (keyed by phase)
  * @returns {string} Human-readable summary of the current phase's entries (empty string if none)
  */
-function summarizeCanvasForPhase(phase, canvasData = {}) {
-  const data = canvasData?.[phase];
+function summarizeCanvasForPhase(phase, canvasData) {
+  if (!canvasData) return "";
+  
+  let data;
+  if (phase === "prototype") {
+    data = canvasData.prototypeData || [];
+  } else {
+    data = canvasData[phase] || {};
+  }
   if (!data) return "";
 
   const bulletList = (arr) =>
@@ -132,10 +139,10 @@ You are the gatekeeper for the next phase ("${nextPhase.toUpperCase()}").
 The user has sent ${userMessageCount} messages so far in this project.
 To unlock the next phase, the user MUST meet BOTH of these criteria:
 1. They must have interacted with you (sent at least 3 messages total).
-2. Their "${phase.toUpperCase()}" canvas must look reasonably complete and thought-through (key sections filled with meaningful, specific content — not empty or one-word placeholders).
+2. Their "${phase.toUpperCase()}" canvas must look reasonably complete. ${phase === 'prototype' ? "CRITICAL RULE FOR PROTOTYPE: Simply having at least one item (link or image) in the artifacts list is enough to satisfy this completeness criteria. Do not demand wireframes, flowcharts, or anything else." : "(Key sections filled with meaningful content — not empty or one-word placeholders)." }
 
 - If they do NOT meet both criteria, keep guiding them within this phase. Do not mention unlocking.
-- If they DO meet both criteria, you MUST include the exact exact text \`[UNLOCK_NEXT_PHASE]\` at the very end of your response. When you do this, briefly acknowledge their progress and gently invite them to click the next phase in the top bar to move on.`
+- If they DO meet both criteria, you MUST include the exact text \`[UNLOCK_NEXT_PHASE]\` at the very end of your response. When you do this, briefly acknowledge their progress and gently invite them to click the next phase in the top bar to move on.`
       : `This is the final phase. If the work looks reasonably complete, acknowledge it and help them reflect on what they learned across the whole Design Thinking process — do not suggest a next phase.`;
 
     const liveStateText = `\n\n[SYSTEM OVERRIDE]: LIVE CANVAS STATE — this is the student's "${phase.toUpperCase()}" canvas EXACTLY as it stands right now. It is the single source of truth and OVERRIDES anything said earlier in this conversation about which sections are empty or filled (the canvas has been edited since then). Read it carefully before replying:\n\n${canvasSummary || `The "${phase.toUpperCase()}" canvas is still completely empty. Gently encourage them to make a first entry.`}\n\n${advanceText}`;

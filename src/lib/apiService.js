@@ -57,6 +57,30 @@ export const apiService = {
   deleteProject: (id) => fetchApi(`/api/projects/${id}`, {
     method: 'DELETE',
   }),
+
+  // Uploads
+  uploadImage: async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const token = sessionStorage.getItem('token');
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    // Do not set Content-Type header so the browser sets it to multipart/form-data with the correct boundary
+    const response = await fetch(`${API_URL || ''}/api/uploads`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || `API Error: ${response.status} ${response.statusText}`);
+    }
+    return data;
+  },
+
   // Collaboration: invite a teammate by email / remove a teammate (or leave) from a project
   addProjectMember: (id, email) => fetchApi(`/api/projects/${id}/members`, {
     method: 'POST',
@@ -81,6 +105,9 @@ export const apiService = {
   updateChallenge: (id, challengePayload) => fetchApi(`/api/challenges/${id}`, {
     method: 'PUT',
     body: JSON.stringify(challengePayload),
+  }),
+  deleteChallenge: (id) => fetchApi(`/api/challenges/${id}`, {
+    method: 'DELETE',
   }),
 
   // Users Management

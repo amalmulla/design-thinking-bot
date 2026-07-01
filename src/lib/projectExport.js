@@ -52,8 +52,9 @@ export function exportProjectMarkdown(project, includeChat, includeCanvases) {
           let text = item.text || item.name || item;
           if (typeof text === 'string') text = text.replace(/<br\s*\/?>/gi, '\n  ');
           let desc = item.description ? `\n  *Description:* ${item.description}` : '';
-          let link = item.url && item.url !== '#' ? ` (${item.url})` : '';
-          md += `- ${text}${link}${desc}\n`;
+          let isImage = item.url && (item.url.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || (item.name && item.name.match(/\.(jpeg|jpg|gif|png|webp|svg)/i)));
+          let link = item.url && item.url !== '#' ? (isImage ? `\n  ![${text}](${item.url})` : ` (${item.url})`) : '';
+          md += `- ${text}${desc}${link}\n`;
         });
         md += `\n`;
       } else if (typeof data === 'object') {

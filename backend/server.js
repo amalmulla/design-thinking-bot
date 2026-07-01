@@ -13,6 +13,8 @@ const challengesRouter = require('./routes/challenges');
 const projectsRouter = require('./routes/projects');
 const usersRouter = require('./routes/users');
 const aiRouter = require('./routes/ai');
+const uploadsRouter = require('./routes/uploads');
+const path = require('path');
 
 const app = express();
 
@@ -29,7 +31,9 @@ const apiLimiter = rateLimit({
 const clientOrigin = process.env.CLIENT_ORIGIN;
 
 // Global middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(morgan('dev'));
 app.use(cors(clientOrigin ? { origin: clientOrigin } : {}));
 app.use(express.json());
@@ -41,6 +45,10 @@ app.use('/api/challenges', challengesRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/uploads', uploadsRouter);
+
+// Serve uploads statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB Atlas
 const MONGODB_URI = process.env.MONGODB_URI;

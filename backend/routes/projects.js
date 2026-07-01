@@ -148,7 +148,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, currentPhase, unlockedPhases, progressPercentage, canvasData, message, messages } = req.body;
+    const { name, currentPhase, unlockedPhases, progressPercentage, canvasData, message, messages, needsTeacherReview } = req.body;
 
     const project = await Project.findById(id);
     if (!project) {
@@ -175,6 +175,12 @@ router.put('/:id', async (req, res) => {
       project.messages = messages;
     } else if (message) {
       project.messages.push(message);
+    }
+
+    if (needsTeacherReview !== undefined) {
+      project.needsTeacherReview = needsTeacherReview;
+    } else if (!isTeacher(req.user)) {
+      project.needsTeacherReview = true;
     }
     
     project.lastUpdated = Date.now();

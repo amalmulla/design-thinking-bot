@@ -39,7 +39,8 @@ const projectSchema = new mongoose.Schema({
   canvasData: { type: mongoose.Schema.Types.Mixed, default: {} },
   messages: [messageSchema],
   teamMessages: [teamMessageSchema],
-  lastUpdated: { type: Date, default: Date.now }
+  lastUpdated: { type: Date, default: Date.now },
+  needsTeacherReview: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('Project', projectSchema);
