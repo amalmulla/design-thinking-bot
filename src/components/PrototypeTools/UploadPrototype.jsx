@@ -9,11 +9,7 @@ export default function UploadPrototype({ isReadOnly, prototypes = [], onUpdate 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
-  
-  const [isUploading, setIsUploading] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
-  const fileInputRef = useRef(null);
 
   const handleAddPrototype = () => {
     if (!name.trim()) return;
@@ -36,57 +32,6 @@ export default function UploadPrototype({ isReadOnly, prototypes = [], onUpdate 
     onUpdate && onUpdate(updated);
   };
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleChange = (e) => {
-    e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      handleFileUpload(e.target.files[0]);
-    }
-  };
-
-  const handleFileUpload = async (file) => {
-    if (!file.type.startsWith('image/')) {
-      alert("Please upload an image file.");
-      return;
-    }
-    
-    setIsUploading(true);
-    try {
-      const result = await apiService.uploadImage(file);
-      const newProto = {
-        id: Date.now().toString(),
-        name: file.name || "Uploaded Image",
-        description: "",
-        url: import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + result.url : result.url
-      };
-      const updated = [...prototypes, newProto];
-      onUpdate && onUpdate(updated);
-    } catch (error) {
-      console.error("Upload failed", error);
-      alert(error.message || "Upload failed. Please try again.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-6 w-full max-w-xl mx-auto mt-4">
       
@@ -95,57 +40,26 @@ export default function UploadPrototype({ isReadOnly, prototypes = [], onUpdate 
         <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5">
           {!isAdding ? (
             <div 
-              className={`flex flex-col items-center justify-center py-8 px-4 text-center border-2 border-dashed rounded-xl transition-colors ${
-                dragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
-              }`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
+              className="flex flex-col items-center justify-center py-8 px-4 text-center border-2 border-dashed rounded-xl transition-colors border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
             >
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleChange}
-              />
-              
-              {isUploading ? (
-                <div className="flex flex-col items-center">
-                  <Loader2 className="h-6 w-6 text-blue-500 animate-spin mb-3" />
-                  <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Uploading image...</p>
-                </div>
-              ) : (
-                <>
-                  <div className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-full mb-3 select-none">
-                    <Upload className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 select-none">Add Prototype Artifacts</h4>
-                  <p className="text-xs text-zinc-550 dark:text-zinc-450 mt-1 max-w-xs select-none">
-                    Drag and drop an image here, or click below to browse. You can also add a manual URL link.
-                  </p>
-                  <div className="flex items-center gap-3 mt-5">
-                    <Button 
-                      onClick={() => fileInputRef.current?.click()} 
-                      variant="outline" 
-                      size="sm"
-                      className="bg-white dark:bg-zinc-950 border-zinc-250 dark:border-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-xs font-semibold cursor-pointer"
-                    >
-                      Browse Files
-                    </Button>
-                    <span className="text-xs font-medium text-zinc-400">or</span>
-                    <Button 
-                      onClick={() => setIsAdding(true)} 
-                      variant="ghost" 
-                      size="sm"
-                      className="text-xs font-semibold cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800"
-                    >
-                      Add URL Manually
-                    </Button>
-                  </div>
-                </>
-              )}
+              <div className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-full mb-3 select-none">
+                <Link className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 select-none">Add Prototype Artifacts</h4>
+              <p className="text-xs text-zinc-550 dark:text-zinc-450 mt-1 max-w-xs select-none">
+                Click below to add a manual URL link to your prototype.
+              </p>
+              <div className="flex items-center gap-3 mt-5">
+                <Button 
+                  onClick={() => setIsAdding(true)} 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-white dark:bg-zinc-950 border-zinc-250 dark:border-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-xs font-semibold text-blue-600 dark:text-blue-400 cursor-pointer"
+                >
+                  <Link className="h-3 w-3 mr-1.5" />
+                  Add Link
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
