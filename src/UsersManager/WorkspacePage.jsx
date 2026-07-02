@@ -18,7 +18,7 @@ import { exportProjectJSON, exportProjectMarkdown, exportProjectPDF } from "../l
 // Modular Workspace Components
 import PhaseStepper from "../components/ProgressTracker/PhaseStepper";
 import ChatPanel from "../components/ChatBot/ChatPanel";
-import TeamChatDrawer from "../components/ChatBot/TeamChatDrawer";
+import TeamChat from "../components/TeamChat/TeamChat";
 import EmpathyMapCanvas from "../components/PersonaBuilder/EmpathyMapCanvas";
 import POVDefineCanvas from "../components/DesignCanvas/POVDefineCanvas";
 import IdeationStickyNotes from "../components/IdeationBoard/IdeationStickyNotes";
@@ -860,7 +860,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
 
       {/* Team chat drawer (collaborator-to-collaborator messaging) */}
       {!isReadOnly && activeProject && (
-        <TeamChatDrawer
+        <TeamChat
           isOpen={isTeamChatOpen}
           onClose={() => setIsTeamChatOpen(false)}
           projectId={activeProject.id}

@@ -29,7 +29,7 @@ const formatTime = (value) => {
 // Right-side slide-out drawer where a project's collaborators chat with each other.
 // Separate from the AI Socratic chat. Polls the server so teammates' messages appear
 // without a manual reload (the app has no realtime/websocket layer).
-export default function TeamChatDrawer({ isOpen, onClose, projectId, currentUserId }) {
+export default function TeamChat({ isOpen, onClose, projectId, currentUserId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

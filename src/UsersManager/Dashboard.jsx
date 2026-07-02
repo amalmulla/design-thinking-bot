@@ -45,7 +45,6 @@ import {
 } from "../components/ui/dropdown-menu";
 
 // --- MOCK DATA ---
-import { PROJECT_DATA, ACTIVE_CHALLENGES, STUDENT_PROJECTS } from "../data/challenges";
 import { createStudentProject, createDesignChallenge } from "../lib/dataModels";
 import { usersService } from "./usersService";
 import { apiService } from "../lib/apiService";
