@@ -4,10 +4,9 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { apiService } from "../../lib/apiService";
-import { io } from "socket.io-client";
 
-// URL to your backend API
-const API_URL = import.meta.env.VITE_API_URL || "";
+// How often (ms) to re-fetch the team chat while the drawer is open.
+const POLL_INTERVAL = 4000;
 
 // Two-letter initials for a teammate's avatar.
 const initialsOf = (name) =>
@@ -52,27 +51,12 @@ export default function TeamChat({ isOpen, onClose, projectId, currentUserId }) 
     }
   }, [projectId]);
 
-  // Fetch initial messages and set up WebSocket connection.
+  // Fetch on open, then poll while the drawer stays open.
   useEffect(() => {
     if (!isOpen || !projectId) return;
-    
-    // Load initial history
     loadMessages({ showSpinner: true });
-    
-    // Establish WebSocket connection
-    const socket = io(API_URL);
-    
-    socket.on('connect', () => {
-      socket.emit('joinProject', projectId);
-    });
-    
-    socket.on('teamChatUpdated', (updatedMessages) => {
-      setMessages(Array.isArray(updatedMessages) ? updatedMessages : []);
-    });
-    
-    return () => {
-      socket.disconnect();
-    };
+    const timer = setInterval(loadMessages, POLL_INTERVAL);
+    return () => clearInterval(timer);
   }, [isOpen, projectId, loadMessages]);
 
   // Keep the view pinned to the latest message.
