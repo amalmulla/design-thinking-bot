@@ -14,8 +14,11 @@ const projectsRouter = require('./routes/projects');
 const usersRouter = require('./routes/users');
 const aiRouter = require('./routes/ai');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -38,6 +41,24 @@ app.use(cors(clientOrigin ? { origin: clientOrigin } : {}));
 app.use(express.json());
 app.use('/api', apiLimiter);
 
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: clientOrigin ? { origin: clientOrigin } : {}
+});
+
+// Pass io to routes
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+// Setup Socket.io connections
+io.on('connection', (socket) => {
+  socket.on('joinProject', (projectId) => {
+    socket.join(projectId);
+  });
+});
+
 // Mount routers
 app.use('/api/auth', authRouter);
 app.use('/api/challenges', challengesRouter);
@@ -58,6 +79,6 @@ mongoose.connect(MONGODB_URI)
 
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

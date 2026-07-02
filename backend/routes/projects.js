@@ -340,6 +340,11 @@ router.post('/:id/team-messages', async (req, res) => {
     });
     await project.save();
 
+    // Broadcast the updated team chat messages to all connected clients in the project room
+    if (req.io) {
+      req.io.to(id).emit('teamChatUpdated', project.teamMessages);
+    }
+
     res.status(201).json(project.teamMessages);
   } catch (error) {
     console.error('Error sending team message:', error);
