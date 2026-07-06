@@ -8,6 +8,12 @@ import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import Header from "../components/ui/Header";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "../components/ui/dropdown-menu";
 import { usersService } from "./usersService";
 import { apiService } from "../lib/apiService";
 import { getRandomPrompt } from "../components/ChatBot/socraticQuestions";
@@ -146,6 +152,12 @@ export default function WorkspacePage({ theme, toggleTheme }) {
         console.error("Failed to update phase to DB:", err);
       }
     }
+  };
+
+  // Navigate back to the appropriate home (teacher command center vs student dashboard).
+  const goBack = () => {
+    const activeUser = usersService.getCurrentUser();
+    navigate(activeUser?.role?.toLowerCase() === "teacher" ? "/teacher" : "/dashboard");
   };
 
   // Persist the project's personas (add/edit/delete all flow through here with the full array).
@@ -498,61 +510,95 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               <Menu className="h-5 w-5" />
             </Button>
           )}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8 cursor-pointer shrink-0"
-            onClick={() => {
-              const activeUser = usersService.getCurrentUser();
-              if (activeUser && activeUser.role?.toLowerCase() === "teacher") {
-                navigate("/teacher");
-              } else {
-                navigate("/dashboard");
-              }
-            }}
+          {/* FULL back button (lg+): arrow + label */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hidden lg:flex text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8 cursor-pointer shrink-0"
+            onClick={goBack}
           >
-            <ArrowLeft className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            <span>
               {usersService.getCurrentUser()?.role?.toLowerCase() === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
             </span>
           </Button>
-          <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800 hidden sm:block shrink-0" />
+          {/* COMPACT back button (below lg): arrow only */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 h-8 w-8 cursor-pointer shrink-0"
+            onClick={goBack}
+            title="Back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800 hidden lg:block shrink-0" />
           <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200 truncate min-w-0 max-w-[120px] sm:max-w-xs">
             {activeProject ? activeProject.title : "Design Thinking Project"}
           </h1>
           {isReadOnly && (
-            <Badge className="hidden sm:inline-flex bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100/50 gap-1.5 text-xs font-semibold py-0.5 px-2 capitalize shadow-sm select-none">
+            <Badge className="hidden lg:inline-flex bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100/50 gap-1.5 text-xs font-semibold py-0.5 px-2 capitalize shadow-sm select-none">
               Review Mode (Read-Only)
             </Badge>
           )}
+
           {!isReadOnly && activeProject && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setTeamError(""); setIsTeamModalOpen(true); }}
-              className="ml-2 h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
-              title="Manage team"
-            >
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Team</span>
-              {((activeProject.members?.length || 0) + 1) > 1 && (
-                <span className="ml-0.5 text-xs font-semibold rounded-full bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 leading-none">
-                  {(activeProject.members?.length || 0) + 1}
-                </span>
-              )}
-            </Button>
-          )}
-          {!isReadOnly && activeProject && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsTeamChatOpen(true)}
-              className="h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
-              title="Team chat"
-            >
-              <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Team Chat</span>
-            </Button>
+            <>
+              {/* FULL (lg+): separate Team and Team Chat buttons */}
+              <div className="hidden lg:flex items-center gap-2 sm:gap-3 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setTeamError(""); setIsTeamModalOpen(true); }}
+                  className="ml-2 h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
+                  title="Manage team"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>Team</span>
+                  {((activeProject.members?.length || 0) + 1) > 1 && (
+                    <span className="ml-0.5 text-xs font-semibold rounded-full bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 leading-none">
+                      {(activeProject.members?.length || 0) + 1}
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsTeamChatOpen(true)}
+                  className="h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
+                  title="Team chat"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Team Chat</span>
+                </Button>
+              </div>
+
+              {/* COMPACT (below lg): single Team dropdown for both actions */}
+              <div className="flex lg:hidden shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="relative h-8 w-8 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer flex items-center justify-center shrink-0"
+                    aria-label="Team menu"
+                    title="Team"
+                  >
+                    <Users className="h-4 w-4" />
+                    {((activeProject.members?.length || 0) + 1) > 1 && (
+                      <span className="absolute -top-1.5 -right-1.5 text-[10px] font-semibold rounded-full bg-blue-500 text-white px-1 leading-tight min-w-4 text-center">
+                        {(activeProject.members?.length || 0) + 1}
+                      </span>
+                    )}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={() => { setTeamError(""); setIsTeamModalOpen(true); }}>
+                      <Users className="h-4 w-4" /> Manage Team
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsTeamChatOpen(true)}>
+                      <MessageSquare className="h-4 w-4" /> Team Chat
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </>
           )}
         </div>
       </Header>
