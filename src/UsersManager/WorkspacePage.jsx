@@ -20,6 +20,7 @@ import PhaseStepper from "../components/ProgressTracker/PhaseStepper";
 import ChatPanel from "../components/ChatBot/ChatPanel";
 import TeamChat from "../components/TeamChat/TeamChat";
 import EmpathyMapCanvas from "../components/PersonaBuilder/EmpathyMapCanvas";
+import PersonaPanel from "../components/PersonaBuilder/PersonaPanel";
 import POVDefineCanvas from "../components/DesignCanvas/POVDefineCanvas";
 import IdeationStickyNotes from "../components/IdeationBoard/IdeationStickyNotes";
 import UploadPrototype from "../components/PrototypeTools/UploadPrototype";
@@ -91,19 +92,26 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             currentPhase: projectRaw.currentPhase?.toLowerCase() || 'empathize' 
           };
           setActiveProject(normalizedActive);
-          
-          // Force teachers to start reviewing from the 'empathize' phase
-          const initialPhase = isTeacher ? 'empathize' : normalizedActive.currentPhase;
+
+          // Students with no personas yet land on the mandatory persona step;
+          // teachers start reviewing from the 'empathize' phase.
+          const needsPersonas = (normalizedActive.personas?.length || 0) === 0;
+          const initialPhase = isTeacher
+            ? 'empathize'
+            : (needsPersonas ? 'personas' : normalizedActive.currentPhase);
           setCurrentPhase(initialPhase);
-          
+
           setMessages(normalizedActive.messages || []);
         } else if (normalizedProjects.length > 0) {
           const fallbackProject = normalizedProjects[0];
           setActiveProject(fallbackProject);
-          
-          const initialPhase = isTeacher ? 'empathize' : fallbackProject.currentPhase;
+
+          const needsPersonas = (fallbackProject.personas?.length || 0) === 0;
+          const initialPhase = isTeacher
+            ? 'empathize'
+            : (needsPersonas ? 'personas' : fallbackProject.currentPhase);
           setCurrentPhase(initialPhase);
-          
+
           setMessages(fallbackProject.messages || []);
         }
       } catch (err) {
@@ -117,6 +125,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
 
   const handlePhaseChange = async (newPhase) => {
     setCurrentPhase(newPhase);
+    // "personas" is a setup view, not a persisted Design Thinking phase — never write it to the DB.
+    if (newPhase === "personas") return;
     if (activeProject && !isReadOnly) {
       const phaseProgress = { empathize: 20, define: 40, ideate: 60, prototype: 80, test: 100 };
       const updated = {
@@ -135,6 +145,17 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       } catch (err) {
         console.error("Failed to update phase to DB:", err);
       }
+    }
+  };
+
+  // Persist the project's personas (add/edit/delete all flow through here with the full array).
+  const handlePersonasUpdate = async (newPersonas) => {
+    if (!activeProject || isReadOnly) return;
+    setActiveProject(prev => ({ ...prev, personas: newPersonas })); // Optimistic UI update
+    try {
+      await apiService.updateProject(activeProject.id, { personas: newPersonas });
+    } catch (err) {
+      console.error("Failed to save personas:", err);
     }
   };
 
@@ -225,7 +246,9 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     // Trigger live GenAI chat
     setIsAiTyping(true);
     try {
-      let aiResponseText = await getSocraticChatCompletion(newMessages, currentPhase, activeProject?.canvasData || {});
+      // During persona setup there is no Design Thinking phase yet; frame the bot around empathy.
+      const effectivePhase = currentPhase === "personas" ? "empathize" : currentPhase;
+      let aiResponseText = await getSocraticChatCompletion(newMessages, effectivePhase, activeProject?.canvasData || {}, activeProject?.personas || []);
       
       let shouldUnlockNext = false;
       if (aiResponseText.includes('[UNLOCK_NEXT_PHASE]')) {
@@ -381,9 +404,18 @@ export default function WorkspacePage({ theme, toggleTheme }) {
 
   const renderCanvasContent = () => {
     switch (currentPhase) {
+      case "personas":
+        return (
+          <PersonaPanel
+            isReadOnly={isReadOnly}
+            personas={activeProject?.personas || []}
+            onUpdate={handlePersonasUpdate}
+          />
+        );
+
       case "empathize":
         return (
-          <EmpathyMapCanvas 
+          <EmpathyMapCanvas
             isReadOnly={isReadOnly} 
             says={empathizeSays}
             thinks={empathizeThinks}
@@ -636,10 +668,11 @@ export default function WorkspacePage({ theme, toggleTheme }) {
           </div>
 
           {/* HORIZONTAL PHASE STEPPER (Top Bar) */}
-          <PhaseStepper 
-            currentPhase={currentPhase} 
-            setCurrentPhase={handlePhaseChange} 
-            unlockedPhases={activeProject?.unlockedPhases || ['empathize']} 
+          <PhaseStepper
+            currentPhase={currentPhase}
+            setCurrentPhase={handlePhaseChange}
+            unlockedPhases={activeProject?.unlockedPhases || ['empathize']}
+            personasComplete={(activeProject?.personas?.length || 0) > 0}
           />
 
           {/* CENTRAL SPLIT VIEW */}
@@ -667,7 +700,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               {/* Canvas Header */}
               <div className="h-12 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center justify-between px-6 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
                 <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 capitalize">
-                  {currentPhase} Canvas
+                  {currentPhase === "personas" ? "Personas" : `${currentPhase} Canvas`}
                 </h2>
               </div>
 

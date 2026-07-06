@@ -148,7 +148,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, currentPhase, unlockedPhases, progressPercentage, canvasData, message, messages, needsTeacherReview } = req.body;
+    const { name, currentPhase, unlockedPhases, progressPercentage, personas, canvasData, message, messages, needsTeacherReview } = req.body;
 
     const project = await Project.findById(id);
     if (!project) {
@@ -164,6 +164,10 @@ router.put('/:id', async (req, res) => {
     if (currentPhase !== undefined) project.currentPhase = currentPhase.toLowerCase();
     if (unlockedPhases !== undefined) project.unlockedPhases = unlockedPhases;
     if (progressPercentage !== undefined) project.progressPercentage = progressPercentage;
+    if (personas !== undefined) {
+      project.personas = personas;
+      project.markModified('personas');
+    }
     // Direct assignment (not spread) to ensure full canvasData is always saved cleanly
     if (canvasData !== undefined) {
       console.log('Saving canvasData:', JSON.stringify(canvasData).substring(0, 200));
