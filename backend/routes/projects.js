@@ -344,6 +344,17 @@ router.post('/:id/team-messages', async (req, res) => {
     });
     await project.save();
 
+    // Broadcast the updated thread to everyone in this project's room. Guarded so a
+    // realtime hiccup can never break the REST response the sender depends on.
+    const io = req.app.get('io');
+    if (io) {
+      try {
+        io.to(String(id)).emit('teamChatUpdated', project.teamMessages);
+      } catch (broadcastErr) {
+        console.error('Team chat broadcast failed:', broadcastErr.message);
+      }
+    }
+
     res.status(201).json(project.teamMessages);
   } catch (error) {
     console.error('Error sending team message:', error);

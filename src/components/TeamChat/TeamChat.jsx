@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Users, Send, X } from "lucide-react";
+import { io } from "socket.io-client";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { apiService } from "../../lib/apiService";
 
-// How often (ms) to re-fetch the team chat while the drawer is open.
-const POLL_INTERVAL = 4000;
+// Base URL of the backend (Render in production). The socket connects straight here.
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Two-letter initials for a teammate's avatar.
 const initialsOf = (name) =>
@@ -26,16 +27,30 @@ const formatTime = (value) => {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
-// Right-side slide-out drawer where a project's collaborators chat with each other.
-// Separate from the AI Socratic chat. Polls the server so teammates' messages appear
-// without a manual reload (the app has no realtime/websocket layer).
+// Status pill shown in the drawer header, reflecting the live socket's health.
+const STATUS_META = {
+  connecting: { label: "Connecting…", dot: "bg-amber-400 animate-pulse", text: "text-amber-600 dark:text-amber-400" },
+  live: { label: "Live", dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" },
+  error: { label: "Offline", dot: "bg-rose-500", text: "text-rose-600 dark:text-rose-400" },
+  disabled: { label: "Not configured", dot: "bg-rose-500", text: "text-rose-600 dark:text-rose-400" },
+};
+
+// Right-side slide-out drawer where a project's collaborators chat in real time over a
+// websocket. Separate from the AI Socratic chat. There is NO polling fallback by design:
+// if the socket (or the server it targets) fails, the drawer surfaces where it failed and
+// the underlying error, so an outage is visible and diagnosable instead of a silent hang.
 export default function TeamChat({ isOpen, onClose, projectId, currentUserId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState("");             // history-load / send errors
+  // connecting | live | error | disabled. Seeded from the config so a missing URL
+  // starts "disabled" without needing to setState inside the effect.
+  const [status, setStatus] = useState(API_URL ? "connecting" : "disabled");
+  const [connError, setConnError] = useState("");     // realtime connection error detail
   const scrollRef = useRef(null);
+  const socketRef = useRef(null);
 
   const loadMessages = useCallback(async ({ showSpinner = false } = {}) => {
     if (!projectId) return;
@@ -45,18 +60,56 @@ export default function TeamChat({ isOpen, onClose, projectId, currentUserId }) 
       setMessages(Array.isArray(data) ? data : []);
       setError("");
     } catch (err) {
-      setError(err.message || "Failed to load team chat.");
+      setError(`Couldn't load history from ${API_URL || "(no server URL)"}: ${err.message || "unknown error"}`);
     } finally {
       if (showSpinner) setLoading(false);
     }
   }, [projectId]);
 
-  // Fetch on open, then poll while the drawer stays open.
+  // Load history once, then keep it live over the websocket. No polling.
   useEffect(() => {
     if (!isOpen || !projectId) return;
+
+    // Config guard: without a backend URL the socket would silently target the wrong
+    // origin (the exact trap that hung the app before). Status is already "disabled"
+    // (seeded from config) and the render surfaces the reason — just don't connect.
+    if (!API_URL) return;
+
     loadMessages({ showSpinner: true });
-    const timer = setInterval(loadMessages, POLL_INTERVAL);
-    return () => clearInterval(timer);
+
+    // Status starts "connecting" (seeded) and is driven from here by the socket's own
+    // events, which fire asynchronously — so no setState runs synchronously in this effect.
+    const socket = io(API_URL, { timeout: 10000 });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      setStatus("live");
+      setConnError("");
+      socket.emit("joinProject", projectId);
+      loadMessages(); // resync in case messages arrived while disconnected
+    });
+
+    socket.on("teamChatUpdated", (updated) => {
+      setMessages(Array.isArray(updated) ? updated : []);
+    });
+
+    socket.on("connect_error", (err) => {
+      setStatus("error");
+      const detail = err?.description ? `${err.message} (status ${err.description})` : (err?.message || "unknown error");
+      setConnError(`Realtime connection to ${API_URL} failed: ${detail}`);
+      console.error("[TeamChat] realtime connect_error:", err);
+    });
+
+    socket.on("disconnect", (reason) => {
+      setStatus("error");
+      setConnError(`Realtime disconnected from ${API_URL} (${reason}). Retrying…`);
+      console.warn("[TeamChat] realtime disconnect:", reason);
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
   }, [isOpen, projectId, loadMessages]);
 
   // Keep the view pinned to the latest message.
@@ -76,7 +129,7 @@ export default function TeamChat({ isOpen, onClose, projectId, currentUserId }) 
       setMessages(Array.isArray(updated) ? updated : []);
       setInput("");
     } catch (err) {
-      setError(err.message || "Failed to send message.");
+      setError(`Send failed (${API_URL || "no server URL"}): ${err.message || "unknown error"}`);
     } finally {
       setSending(false);
     }
@@ -101,9 +154,14 @@ export default function TeamChat({ isOpen, onClose, projectId, currentUserId }) 
       >
         {/* Header */}
         <div className="h-14 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Team Chat</span>
+            {/* Live realtime status */}
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${STATUS_META[status].text}`} title={connError || undefined}>
+              <span className={`h-1.5 w-1.5 rounded-full ${STATUS_META[status].dot}`} />
+              {STATUS_META[status].label}
+            </span>
           </div>
           <Button
             type="button"
@@ -163,8 +221,22 @@ export default function TeamChat({ isOpen, onClose, projectId, currentUserId }) 
 
         {/* Input */}
         <div className="p-4 bg-zinc-50 dark:bg-zinc-950 shrink-0 border-t border-zinc-100 dark:border-zinc-900">
-          {error && (
-            <p className="text-xs text-rose-500 mb-2 px-1">{error}</p>
+          {(connError || error || status === "disabled") && (
+            <div className="mb-2 space-y-1 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 p-2.5">
+              {status === "disabled" && (
+                <p className="text-[11px] leading-snug text-rose-600 dark:text-rose-400 break-words">
+                  <span className="font-semibold">Chat unavailable —</span> VITE_API_URL is not set on this build. Point it at your backend URL and redeploy.
+                </p>
+              )}
+              {connError && (
+                <p className="text-[11px] leading-snug text-rose-600 dark:text-rose-400 break-words">
+                  <span className="font-semibold">Realtime:</span> {connError}
+                </p>
+              )}
+              {error && (
+                <p className="text-[11px] leading-snug text-rose-600 dark:text-rose-400 break-words">{error}</p>
+              )}
+            </div>
           )}
           <div className="relative flex items-center border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900/50 focus-within:border-zinc-400 dark:focus-within:border-zinc-700 transition-colors">
             <Input
