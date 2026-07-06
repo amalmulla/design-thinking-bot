@@ -17,6 +17,11 @@ const aiRouter = require('./routes/ai');
 const path = require('path');
 
 const app = express();
+// Behind Render's proxy the client IP arrives via X-Forwarded-For. Trust exactly one
+// proxy hop so express-rate-limit can identify clients (and stop throwing
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR). Using 1 rather than `true` avoids clients
+// spoofing the header to evade rate limits.
+app.set('trust proxy', 1);
 // Wrap Express in a bare HTTP server so Socket.io can share the same port.
 const server = http.createServer(app);
 
