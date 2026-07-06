@@ -73,7 +73,7 @@ export default function App() {
         <Routes>
           {/* Auth Routes */}
           <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage theme={theme} toggleTheme={toggleTheme} />} />
           <Route path="/register" element={<Register />} />
           
           {/* Protected Profile View (Any authenticated user can access) */}

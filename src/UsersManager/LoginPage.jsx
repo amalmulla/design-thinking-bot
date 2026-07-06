@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Brain, Eye, EyeOff } from "lucide-react";
+import { LuSun, LuMoon } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { usersService } from "./usersService";
 
@@ -9,7 +10,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Button } from "../components/ui/button";
 
-export default function LoginPage() {
+export default function LoginPage({ theme, toggleTheme }) {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -50,6 +51,21 @@ export default function LoginPage() {
 
   return (
     <div className="bg-white dark:bg-zinc-900 text-black dark:text-white min-h-screen flex flex-col items-center justify-center p-4 font-sans transition-colors duration-200">
+      {/* Theme toggle — mirrors the in-app Header control so the preference is reachable before login. */}
+      {toggleTheme && (
+        <button
+          onClick={toggleTheme}
+          type="button"
+          className="absolute top-4 right-4 p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-650 cursor-pointer flex items-center justify-center"
+          aria-label="Toggle Theme"
+        >
+          {theme === "dark" ? (
+            <LuSun className="h-4.5 w-4.5" />
+          ) : (
+            <LuMoon className="h-4.5 w-4.5" />
+          )}
+        </button>
+      )}
       <Card className="w-full max-w-sm bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-2xl overflow-hidden">
         
         <CardHeader className="space-y-4 pt-8 pb-6 text-center flex flex-col items-center">
