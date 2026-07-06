@@ -8,7 +8,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "./dropdown-menu";
 import { usersService } from "../../UsersManager/usersService";
@@ -111,9 +110,10 @@ export default function Header({
                 <LuUser className="h-4.5 w-4.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel className="capitalize">
+                {/* Plain label div — base-ui's GroupLabel requires a Menu.Group ancestor and crashes without one. */}
+                <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground capitalize select-none">
                   {currentUser.role?.toLowerCase() === "teacher" ? "Teacher" : "Student"}
-                </DropdownMenuLabel>
+                </div>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <LuUser className="h-4 w-4" /> Profile
                 </DropdownMenuItem>
