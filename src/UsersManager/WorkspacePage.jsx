@@ -8,6 +8,12 @@ import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import Header from "../components/ui/Header";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "../components/ui/dropdown-menu";
 import { usersService } from "./usersService";
 import { apiService } from "../lib/apiService";
 import { getRandomPrompt } from "../components/ChatBot/socraticQuestions";
@@ -20,6 +26,7 @@ import PhaseStepper from "../components/ProgressTracker/PhaseStepper";
 import ChatPanel from "../components/ChatBot/ChatPanel";
 import TeamChat from "../components/TeamChat/TeamChat";
 import EmpathyMapCanvas from "../components/PersonaBuilder/EmpathyMapCanvas";
+import PersonaPanel from "../components/PersonaBuilder/PersonaPanel";
 import POVDefineCanvas from "../components/DesignCanvas/POVDefineCanvas";
 import IdeationStickyNotes from "../components/IdeationBoard/IdeationStickyNotes";
 import UploadPrototype from "../components/PrototypeTools/UploadPrototype";
@@ -91,19 +98,26 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             currentPhase: projectRaw.currentPhase?.toLowerCase() || 'empathize' 
           };
           setActiveProject(normalizedActive);
-          
-          // Force teachers to start reviewing from the 'empathize' phase
-          const initialPhase = isTeacher ? 'empathize' : normalizedActive.currentPhase;
+
+          // Students with no personas yet land on the mandatory persona step;
+          // teachers start reviewing from the 'empathize' phase.
+          const needsPersonas = (normalizedActive.personas?.length || 0) === 0;
+          const initialPhase = isTeacher
+            ? 'empathize'
+            : (needsPersonas ? 'personas' : normalizedActive.currentPhase);
           setCurrentPhase(initialPhase);
-          
+
           setMessages(normalizedActive.messages || []);
         } else if (normalizedProjects.length > 0) {
           const fallbackProject = normalizedProjects[0];
           setActiveProject(fallbackProject);
-          
-          const initialPhase = isTeacher ? 'empathize' : fallbackProject.currentPhase;
+
+          const needsPersonas = (fallbackProject.personas?.length || 0) === 0;
+          const initialPhase = isTeacher
+            ? 'empathize'
+            : (needsPersonas ? 'personas' : fallbackProject.currentPhase);
           setCurrentPhase(initialPhase);
-          
+
           setMessages(fallbackProject.messages || []);
         }
       } catch (err) {
@@ -117,6 +131,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
 
   const handlePhaseChange = async (newPhase) => {
     setCurrentPhase(newPhase);
+    // "personas" is a setup view, not a persisted Design Thinking phase — never write it to the DB.
+    if (newPhase === "personas") return;
     if (activeProject && !isReadOnly) {
       const phaseProgress = { empathize: 20, define: 40, ideate: 60, prototype: 80, test: 100 };
       const updated = {
@@ -135,6 +151,23 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       } catch (err) {
         console.error("Failed to update phase to DB:", err);
       }
+    }
+  };
+
+  // Navigate back to the appropriate home (teacher command center vs student dashboard).
+  const goBack = () => {
+    const activeUser = usersService.getCurrentUser();
+    navigate(activeUser?.role?.toLowerCase() === "teacher" ? "/teacher" : "/dashboard");
+  };
+
+  // Persist the project's personas (add/edit/delete all flow through here with the full array).
+  const handlePersonasUpdate = async (newPersonas) => {
+    if (!activeProject || isReadOnly) return;
+    setActiveProject(prev => ({ ...prev, personas: newPersonas })); // Optimistic UI update
+    try {
+      await apiService.updateProject(activeProject.id, { personas: newPersonas });
+    } catch (err) {
+      console.error("Failed to save personas:", err);
     }
   };
 
@@ -225,7 +258,9 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     // Trigger live GenAI chat
     setIsAiTyping(true);
     try {
-      let aiResponseText = await getSocraticChatCompletion(newMessages, currentPhase, activeProject?.canvasData || {});
+      // During persona setup there is no Design Thinking phase yet; frame the bot around empathy.
+      const effectivePhase = currentPhase === "personas" ? "empathize" : currentPhase;
+      let aiResponseText = await getSocraticChatCompletion(newMessages, effectivePhase, activeProject?.canvasData || {}, activeProject?.personas || []);
       
       let shouldUnlockNext = false;
       if (aiResponseText.includes('[UNLOCK_NEXT_PHASE]')) {
@@ -381,9 +416,18 @@ export default function WorkspacePage({ theme, toggleTheme }) {
 
   const renderCanvasContent = () => {
     switch (currentPhase) {
+      case "personas":
+        return (
+          <PersonaPanel
+            isReadOnly={isReadOnly}
+            personas={activeProject?.personas || []}
+            onUpdate={handlePersonasUpdate}
+          />
+        );
+
       case "empathize":
         return (
-          <EmpathyMapCanvas 
+          <EmpathyMapCanvas
             isReadOnly={isReadOnly} 
             says={empathizeSays}
             thinks={empathizeThinks}
@@ -455,7 +499,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       
       {/* GLOBAL HEADER */}
       <Header theme={theme} toggleTheme={toggleTheme} brainColor="text-pink-500 dark:text-pink-400">
-        <div className="flex items-center gap-2 sm:gap-3 mr-auto">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
           {!isReadOnly && (
             <Button 
               variant="ghost" 
@@ -466,61 +510,95 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               <Menu className="h-5 w-5" />
             </Button>
           )}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8 cursor-pointer"
-            onClick={() => {
-              const activeUser = usersService.getCurrentUser();
-              if (activeUser && activeUser.role?.toLowerCase() === "teacher") {
-                navigate("/teacher");
-              } else {
-                navigate("/dashboard");
-              }
-            }}
+          {/* FULL back button (lg+): arrow + label */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hidden lg:flex text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8 cursor-pointer shrink-0"
+            onClick={goBack}
           >
-            <ArrowLeft className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            <span>
               {usersService.getCurrentUser()?.role?.toLowerCase() === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
             </span>
           </Button>
-          <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800 hidden sm:block" />
-          <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200 truncate max-w-[120px] sm:max-w-xs">
+          {/* COMPACT back button (below lg): arrow only */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 h-8 w-8 cursor-pointer shrink-0"
+            onClick={goBack}
+            title="Back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800 hidden lg:block shrink-0" />
+          <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200 truncate min-w-0 max-w-[120px] sm:max-w-xs">
             {activeProject ? activeProject.title : "Design Thinking Project"}
           </h1>
           {isReadOnly && (
-            <Badge className="hidden sm:inline-flex bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100/50 gap-1.5 text-xs font-semibold py-0.5 px-2 capitalize shadow-sm select-none">
+            <Badge className="hidden lg:inline-flex bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100/50 gap-1.5 text-xs font-semibold py-0.5 px-2 capitalize shadow-sm select-none">
               Review Mode (Read-Only)
             </Badge>
           )}
+
           {!isReadOnly && activeProject && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setTeamError(""); setIsTeamModalOpen(true); }}
-              className="ml-2 h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-              title="Manage team"
-            >
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Team</span>
-              {((activeProject.members?.length || 0) + 1) > 1 && (
-                <span className="ml-0.5 text-xs font-semibold rounded-full bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 leading-none">
-                  {(activeProject.members?.length || 0) + 1}
-                </span>
-              )}
-            </Button>
-          )}
-          {!isReadOnly && activeProject && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsTeamChatOpen(true)}
-              className="h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-              title="Team chat"
-            >
-              <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Team Chat</span>
-            </Button>
+            <>
+              {/* FULL (lg+): separate Team and Team Chat buttons */}
+              <div className="hidden lg:flex items-center gap-2 sm:gap-3 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setTeamError(""); setIsTeamModalOpen(true); }}
+                  className="ml-2 h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
+                  title="Manage team"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>Team</span>
+                  {((activeProject.members?.length || 0) + 1) > 1 && (
+                    <span className="ml-0.5 text-xs font-semibold rounded-full bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 leading-none">
+                      {(activeProject.members?.length || 0) + 1}
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsTeamChatOpen(true)}
+                  className="h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
+                  title="Team chat"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Team Chat</span>
+                </Button>
+              </div>
+
+              {/* COMPACT (below lg): single Team dropdown for both actions */}
+              <div className="flex lg:hidden shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="relative h-8 w-8 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer flex items-center justify-center shrink-0"
+                    aria-label="Team menu"
+                    title="Team"
+                  >
+                    <Users className="h-4 w-4" />
+                    {((activeProject.members?.length || 0) + 1) > 1 && (
+                      <span className="absolute -top-1.5 -right-1.5 text-[10px] font-semibold rounded-full bg-blue-500 text-white px-1 leading-tight min-w-4 text-center">
+                        {(activeProject.members?.length || 0) + 1}
+                      </span>
+                    )}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={() => { setTeamError(""); setIsTeamModalOpen(true); }}>
+                      <Users className="h-4 w-4" /> Manage Team
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsTeamChatOpen(true)}>
+                      <MessageSquare className="h-4 w-4" /> Team Chat
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </>
           )}
         </div>
       </Header>
@@ -636,10 +714,11 @@ export default function WorkspacePage({ theme, toggleTheme }) {
           </div>
 
           {/* HORIZONTAL PHASE STEPPER (Top Bar) */}
-          <PhaseStepper 
-            currentPhase={currentPhase} 
-            setCurrentPhase={handlePhaseChange} 
-            unlockedPhases={activeProject?.unlockedPhases || ['empathize']} 
+          <PhaseStepper
+            currentPhase={currentPhase}
+            setCurrentPhase={handlePhaseChange}
+            unlockedPhases={activeProject?.unlockedPhases || ['empathize']}
+            personasComplete={(activeProject?.personas?.length || 0) > 0}
           />
 
           {/* CENTRAL SPLIT VIEW */}
@@ -667,7 +746,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               {/* Canvas Header */}
               <div className="h-12 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center justify-between px-6 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
                 <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 capitalize">
-                  {currentPhase} Canvas
+                  {currentPhase === "personas" ? "Personas" : `${currentPhase} Canvas`}
                 </h2>
               </div>
 

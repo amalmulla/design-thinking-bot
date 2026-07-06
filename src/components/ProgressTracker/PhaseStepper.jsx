@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, Target, Lightbulb, Layers, FlaskConical, Lock } from "lucide-react";
+import { UserSearch, Users, Target, Lightbulb, Layers, FlaskConical, Lock } from "lucide-react";
 
 export const DESIGN_PHASES = [
   { id: "empathize", label: "Empathize", icon: Users, color: "text-rose-600 dark:text-rose-400" },
@@ -9,19 +9,28 @@ export const DESIGN_PHASES = [
   { id: "test", label: "Test", icon: FlaskConical, color: "text-emerald-600 dark:text-emerald-400" },
 ];
 
-export default function PhaseStepper({ currentPhase, setCurrentPhase, unlockedPhases = ['empathize'] }) {
+// The mandatory setup step that precedes the five phases. Always selectable.
+const PERSONA_STEP = { id: "personas", label: "Personas", icon: UserSearch, color: "text-indigo-600 dark:text-indigo-400" };
+
+export default function PhaseStepper({ currentPhase, setCurrentPhase, unlockedPhases = ['empathize'], personasComplete = false }) {
+  // Personas first, then the five Design Thinking phases.
+  const steps = [PERSONA_STEP, ...DESIGN_PHASES];
   return (
     <div className="h-16 shrink-0 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-6 overflow-x-auto no-scrollbar bg-white dark:bg-zinc-950">
       <div className="flex items-center w-full max-w-4xl mx-auto justify-between">
-        {DESIGN_PHASES.map((phase, index) => {
+        {steps.map((phase, index) => {
           const Icon = phase.icon;
           const isActive = currentPhase === phase.id;
-          
+          const isPersonaStep = phase.id === "personas";
+
           // Determine if a step is "past"
-          const currentIndex = DESIGN_PHASES.findIndex(p => p.id === currentPhase);
+          const currentIndex = steps.findIndex(p => p.id === currentPhase);
           const isCompleted = index < currentIndex;
 
-          const isUnlocked = unlockedPhases.includes(phase.id);
+          // The persona step is always open; the five phases require personas first, then their own unlock.
+          const isUnlocked = isPersonaStep
+            ? true
+            : personasComplete && unlockedPhases.includes(phase.id);
 
           return (
             <React.Fragment key={phase.id}>
@@ -48,7 +57,7 @@ export default function PhaseStepper({ currentPhase, setCurrentPhase, unlockedPh
                 <span className="text-sm font-semibold tracking-wide">{phase.label}</span>
               </button>
               {/* Connector line between steps */}
-              {index < DESIGN_PHASES.length - 1 && (
+              {index < steps.length - 1 && (
                 <div className="flex-1 max-w-[40px] mx-2 h-[1px] bg-zinc-200 dark:bg-zinc-800" />
               )}
             </React.Fragment>

@@ -93,15 +93,45 @@ function summarizeCanvasForPhase(phase, canvasData) {
 }
 
 /**
+ * Serializes the project's personas into readable plain text so the AI can ground its
+ * questions in who the student is designing for, across every phase.
+ *
+ * @param {Array<Object>} personas - The project's personas
+ * @returns {string} Human-readable summary (empty string if none)
+ */
+function summarizePersonas(personas) {
+  if (!Array.isArray(personas) || personas.length === 0) return "";
+
+  const list = (arr) =>
+    Array.isArray(arr) && arr.length ? arr.join("; ") : "(none listed)";
+
+  return personas
+    .map((p, i) => {
+      const header = [p.name || `Persona ${i + 1}`, p.age, p.role].filter(Boolean).join(", ");
+      return [
+        `Persona ${i + 1}: ${header}`,
+        p.bio ? `  Background: ${p.bio}` : null,
+        `  Goals: ${list(p.goals)}`,
+        `  Frustrations: ${list(p.frustrations)}`,
+        `  Needs: ${list(p.needs)}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    })
+    .join("\n\n");
+}
+
+/**
  * Gets Socratic chat completions via the backend AI proxy, tailored to the current design phase.
  * If the server has no Cerebras key (or the request fails), it falls back to a simulated local prompt.
  *
  * @param {Array<Object>} messages - Full chat conversation history
  * @param {string} phase - Active student Design Thinking phase ('empathize', 'define', 'ideate', 'prototype', 'test')
  * @param {Object} [canvasData] - The project's canvasData so the AI can read what the student filled in
+ * @param {Array<Object>} [personas] - The project's personas, given to the AI as shared context in every phase
  * @returns {Promise<string>} Socratic markdown output text
  */
-export async function getSocraticChatCompletion(messages, phase, canvasData = {}) {
+export async function getSocraticChatCompletion(messages, phase, canvasData = {}, personas = []) {
   try {
     // Retrieve custom Socratic prompts based on stage
     const samplePrompts = SOCRATIC_PROMPTS[phase] || SOCRATIC_PROMPTS["empathize"];
@@ -145,7 +175,14 @@ To unlock the next phase, the user MUST meet BOTH of these criteria:
 - If they DO meet both criteria, you MUST include the exact text \`[UNLOCK_NEXT_PHASE]\` at the very end of your response. When you do this, briefly acknowledge their progress and gently invite them to click the next phase in the top bar to move on.`
       : `This is the final phase. If the work looks reasonably complete, acknowledge it and help them reflect on what they learned across the whole Design Thinking process — do not suggest a next phase.`;
 
-    const liveStateText = `\n\n[SYSTEM OVERRIDE]: LIVE CANVAS STATE — this is the student's "${phase.toUpperCase()}" canvas EXACTLY as it stands right now. It is the single source of truth and OVERRIDES anything said earlier in this conversation about which sections are empty or filled (the canvas has been edited since then). Read it carefully before replying:\n\n${canvasSummary || `The "${phase.toUpperCase()}" canvas is still completely empty. Gently encourage them to make a first entry.`}\n\n${advanceText}`;
+    // Persona context: who the student is designing for. Shared across all phases so the AI can
+    // push the student to consider each user, not just the canvas in front of them.
+    const personaSummary = summarizePersonas(personas);
+    const personaText = personaSummary
+      ? `\n\n[PROJECT PERSONAS]: These are the user personas this project is designed for. Ground your questions in them — challenge the student on how their current work serves (or neglects) these specific people:\n\n${personaSummary}`
+      : "";
+
+    const liveStateText = `\n\n[SYSTEM OVERRIDE]: LIVE CANVAS STATE — this is the student's "${phase.toUpperCase()}" canvas EXACTLY as it stands right now. It is the single source of truth and OVERRIDES anything said earlier in this conversation about which sections are empty or filled (the canvas has been edited since then). Read it carefully before replying:\n\n${canvasSummary || `The "${phase.toUpperCase()}" canvas is still completely empty. Gently encourage them to make a first entry.`}${personaText}\n\n${advanceText}`;
 
     // Format chat history for OpenAI-compatible Cerebras API
     // Cerebras/OpenAI format expects: { role: 'user' | 'assistant' | 'system', content: string }

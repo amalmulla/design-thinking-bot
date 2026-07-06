@@ -42,6 +42,19 @@ export function exportProjectMarkdown(project, includeChat, includeCanvases) {
   md += `**Exported On:** ${new Date().toLocaleString()}\n\n`;
   md += `---\n\n`;
 
+  if (includeCanvases && Array.isArray(project.personas) && project.personas.length > 0) {
+    md += `## Personas\n\n`;
+    project.personas.forEach((p) => {
+      const meta = [p.age, p.role].filter(Boolean).join(' · ');
+      md += `### ${p.name || 'Unnamed persona'}${meta ? ` (${meta})` : ''}\n\n`;
+      if (p.bio) md += `${p.bio}\n\n`;
+      if (p.goals?.length) md += `**Goals:** ${p.goals.join('; ')}\n\n`;
+      if (p.frustrations?.length) md += `**Frustrations:** ${p.frustrations.join('; ')}\n\n`;
+      if (p.needs?.length) md += `**Needs:** ${p.needs.join('; ')}\n\n`;
+    });
+    md += `---\n\n`;
+  }
+
   if (includeCanvases && project.canvasData) {
     md += `## Canvases\n\n`;
     for (const [phase, data] of Object.entries(project.canvasData)) {
@@ -114,7 +127,37 @@ export function exportProjectPDF(project, includeChat, includeCanvases) {
   doc.text(`Exported On: ${new Date().toLocaleString()}`, 14, yPos);
   yPos += 15;
 
+  if (includeCanvases && Array.isArray(project.personas) && project.personas.length > 0) {
+    if (yPos > 260) { doc.addPage(); yPos = 20; }
+    doc.setFontSize(16);
+    doc.text('Personas', 14, yPos);
+    yPos += 10;
+
+    const personaRows = project.personas.map((p) => {
+      const meta = [p.age, p.role].filter(Boolean).join(' · ');
+      const parts = [];
+      if (p.bio) parts.push(p.bio);
+      if (p.goals?.length) parts.push(`Goals: ${p.goals.join('; ')}`);
+      if (p.frustrations?.length) parts.push(`Frustrations: ${p.frustrations.join('; ')}`);
+      if (p.needs?.length) parts.push(`Needs: ${p.needs.join('; ')}`);
+      return [`${p.name || 'Unnamed'}${meta ? `\n(${meta})` : ''}`, cleanMarkdown(parts.join('\n'))];
+    });
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Persona', 'Details']],
+      body: personaRows,
+      theme: 'grid',
+      styles: { overflow: 'linebreak' },
+      columnStyles: { 0: { cellWidth: 40 } },
+      headStyles: { fillColor: [79, 70, 229] },
+      margin: { left: 14, right: 14 }
+    });
+    yPos = doc.lastAutoTable.finalY + 10;
+  }
+
   if (includeCanvases && project.canvasData) {
+    if (yPos > 270) { doc.addPage(); yPos = 20; }
     doc.setFontSize(16);
     doc.text('Canvases', 14, yPos);
     yPos += 10;
