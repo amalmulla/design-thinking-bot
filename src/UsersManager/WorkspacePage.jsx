@@ -487,7 +487,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
       
       {/* GLOBAL HEADER */}
       <Header theme={theme} toggleTheme={toggleTheme} brainColor="text-pink-500 dark:text-pink-400">
-        <div className="flex items-center gap-2 sm:gap-3 mr-auto">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
           {!isReadOnly && (
             <Button 
               variant="ghost" 
@@ -501,7 +501,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8 cursor-pointer"
+            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-0 px-2 h-8 cursor-pointer shrink-0"
             onClick={() => {
               const activeUser = usersService.getCurrentUser();
               if (activeUser && activeUser.role?.toLowerCase() === "teacher") {
@@ -516,8 +516,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               {usersService.getCurrentUser()?.role?.toLowerCase() === "teacher" ? "Back to Command Center" : "Back to Dashboard"}
             </span>
           </Button>
-          <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800 hidden sm:block" />
-          <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200 truncate max-w-[120px] sm:max-w-xs">
+          <Separator orientation="vertical" className="h-6 bg-zinc-200 dark:bg-zinc-800 hidden sm:block shrink-0" />
+          <h1 className="text-sm font-semibold tracking-wide text-zinc-800 dark:text-zinc-200 truncate min-w-0 max-w-[120px] sm:max-w-xs">
             {activeProject ? activeProject.title : "Design Thinking Project"}
           </h1>
           {isReadOnly && (
@@ -530,7 +530,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               variant="outline"
               size="sm"
               onClick={() => { setTeamError(""); setIsTeamModalOpen(true); }}
-              className="ml-2 h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              className="ml-2 h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
               title="Manage team"
             >
               <Users className="h-4 w-4" />
@@ -547,7 +547,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               variant="outline"
               size="sm"
               onClick={() => setIsTeamChatOpen(true)}
-              className="h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              className="h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
               title="Team chat"
             >
               <MessageSquare className="h-4 w-4" />

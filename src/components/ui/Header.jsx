@@ -40,7 +40,7 @@ export default function Header({
       </div>
 
       {/* Middle & Right: Children controls and unified user controls */}
-      <div className="flex flex-1 items-center justify-end gap-2 sm:gap-4 ml-2 sm:ml-4 min-w-0 shrink-0">
+      <div className="flex flex-1 items-center justify-end gap-2 sm:gap-4 ml-2 sm:ml-4 min-w-0">
         {/* Render page-specific custom controls (e.g. back buttons) */}
         {children}
         
@@ -68,7 +68,7 @@ export default function Header({
             <button
               onClick={() => navigate('/profile')}
               type="button"
-              className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-650 cursor-pointer flex items-center justify-center"
+              className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-650 cursor-pointer flex items-center justify-center shrink-0"
               aria-label="View Profile"
               title="View Profile"
             >
@@ -81,7 +81,7 @@ export default function Header({
         <button
           onClick={toggleTheme}
           type="button"
-          className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-650 cursor-pointer flex items-center justify-center"
+          className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-650 cursor-pointer flex items-center justify-center shrink-0"
           aria-label="Toggle Theme"
         >
           {theme === "dark" ? (
@@ -96,7 +96,7 @@ export default function Header({
           <button
             onClick={handleLogout}
             type="button"
-            className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-650 cursor-pointer flex items-center justify-center"
+            className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-650 cursor-pointer flex items-center justify-center shrink-0"
             aria-label="Logout"
             title="Logout"
           >
