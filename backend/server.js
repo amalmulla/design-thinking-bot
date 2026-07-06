@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const http = require('http');
 
 dotenv.config();
 
@@ -16,6 +17,8 @@ const aiRouter = require('./routes/ai');
 const path = require('path');
 
 const app = express();
+// Wrap Express in a bare HTTP server so Socket.io can share the same port.
+const server = http.createServer(app);
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -45,6 +48,30 @@ app.use('/api/projects', projectsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/ai', aiRouter);
 
+// --- Realtime (Socket.io) ---
+// Deliberately isolated: if any of this throws, we log and continue so the REST API
+// and login still boot. Realtime is an enhancement, never load-bearing.
+let io = null;
+try {
+  const { Server } = require('socket.io');
+  io = new Server(server, {
+    // Mirror the REST CORS policy: lock to CLIENT_ORIGIN when set, otherwise allow all.
+    cors: clientOrigin ? { origin: clientOrigin } : { origin: '*' },
+  });
+  io.on('connection', (socket) => {
+    // Each open project drawer joins a room keyed by projectId so broadcasts stay scoped.
+    socket.on('joinProject', (projectId) => {
+      if (projectId) socket.join(String(projectId));
+    });
+  });
+  console.log('Socket.io initialized (realtime team chat enabled).');
+} catch (err) {
+  console.error('Socket.io failed to initialize — realtime disabled, REST/login still up:', err.message);
+  io = null;
+}
+// Expose io to routes via req.app.get('io'); it may be null (realtime off).
+app.set('io', io);
+
 // Connect to MongoDB Atlas
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -58,6 +85,6 @@ mongoose.connect(MONGODB_URI)
 
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
