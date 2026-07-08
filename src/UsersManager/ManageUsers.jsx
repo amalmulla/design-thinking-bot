@@ -297,7 +297,7 @@ export default function ManageUsers({ theme, toggleTheme }) {
                         <Button
                           variant={user.blocked ? "outline" : "destructive"}
                           size="sm"
-                          disabled={user.id === currentUser.id} // Prevent blocking oneself
+                          disabled={user.id === currentUser.id || user.role?.toLowerCase() === 'teacher'} // Prevent blocking oneself or other teachers
                           onClick={() => handleToggleBlock(user.id)}
                           className={`text-xs font-semibold px-2 py-1 h-7 cursor-pointer ${
                             user.blocked 
