@@ -39,6 +39,7 @@
  * @property {string} lastUpdated - Last active activity indicator
  * @property {string} creativityScore - AI creativity evaluation grade ('High' or 'Medium' or 'Needs Focus' or 'Not Evaluated')
  * @property {string} teamworkStatus - Teamwork evaluation rating ('Excellent' or 'Good' or 'Needs Work' or 'Solo')
+ * @property {string} teacherFeedback - Dedicated teacher review feedback
  * @property {Object} canvasData - Stage-specific visual card datasets
  * @property {Array<string>} canvasData.empathize - Empathy observations Says/Thinks/Does/Feels cards
  * @property {Object} canvasData.define - Problem statement POV structure
@@ -123,6 +124,7 @@ export function createStudentProject(title, studentOrTeamName, challengeId) {
     lastUpdated: "Just now",
     creativityScore: "Not Evaluated",
     teamworkStatus: "Solo",
+    teacherFeedback: "",
     canvasData: {
       empathize: [],
       define: { user: "", needs: "", insight: "" },

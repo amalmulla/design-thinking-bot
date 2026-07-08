@@ -49,9 +49,10 @@ router.get('/', async (req, res) => {
     const { studentId, teacherId } = req.query;
     let query = {};
 
-    // A student sees projects they created OR were invited to collaborate on.
+    // A student sees projects they created OR were invited to collaborate on, excluding archived.
     if (studentId) {
       query.$or = [{ studentId }, { members: studentId }];
+      query.isArchived = { $ne: true };
     }
 
     // Filter to projects belonging to a course created by this teacher or a challenge created by this teacher
@@ -384,6 +385,69 @@ router.post('/:id/team-messages', async (req, res) => {
   } catch (error) {
     console.error('Error sending team message:', error);
     res.status(500).json({ message: 'Server error sending team message' });
+  }
+});
+
+// --- Teacher chat (messages between students and teachers) ---
+
+router.get('/:id/teacher-messages', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+    const project = await Project.findById(id).select('studentId members teacherMessages');
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ message: 'You do not have access to this project.' });
+    }
+    res.status(200).json(project.teacherMessages || []);
+  } catch (error) {
+    console.error('Error fetching teacher messages:', error);
+    res.status(500).json({ message: 'Server error fetching teacher messages' });
+  }
+});
+
+router.post('/:id/teacher-messages', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const content = (req.body.content || '').trim().slice(0, 2000);
+    if (!content) {
+      return res.status(400).json({ message: 'Message content is required.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ message: 'You do not have access to this project.' });
+    }
+
+    project.teacherMessages.push({
+      authorId: req.user.id?.toString(),
+      authorName: req.user.name || 'Unknown',
+      content,
+    });
+    await project.save();
+
+    const io = req.app.get('io');
+    if (io) {
+      try {
+        io.to(String(id)).emit('teacherChatUpdated', project.teacherMessages);
+      } catch (broadcastErr) {
+        console.error('Teacher chat broadcast failed:', broadcastErr.message);
+      }
+    }
+
+    res.status(201).json(project.teacherMessages);
+  } catch (error) {
+    console.error('Error sending teacher message:', error);
+    res.status(500).json({ message: 'Server error sending teacher message' });
   }
 });
 

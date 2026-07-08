@@ -56,6 +56,7 @@ const projectSchema = new mongoose.Schema({
   canvasData: { type: mongoose.Schema.Types.Mixed, default: {} },
   messages: [messageSchema],
   teamMessages: [teamMessageSchema],
+  teacherMessages: [teamMessageSchema],
   lastUpdated: { type: Date, default: Date.now },
   needsTeacherReview: { type: Boolean, default: false },
   isArchived: { type: Boolean, default: false }

@@ -72,6 +72,11 @@ export const apiService = {
     method: 'POST',
     body: JSON.stringify({ content }),
   }),
+  getTeacherMessages: (id) => fetchApi(`/api/projects/${id}/teacher-messages`),
+  sendTeacherMessage: (id, content) => fetchApi(`/api/projects/${id}/teacher-messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  }),
 
   // Challenges
   getChallenges: (teacherId) => fetchApi(teacherId ? `/api/challenges?teacherId=${teacherId}` : '/api/challenges'),

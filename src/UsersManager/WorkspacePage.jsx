@@ -25,6 +25,7 @@ import { exportProjectJSON, exportProjectMarkdown, exportProjectPDF } from "../l
 import PhaseStepper from "../components/ProgressTracker/PhaseStepper";
 import ChatPanel from "../components/ChatBot/ChatPanel";
 import TeamChat from "../components/TeamChat/TeamChat";
+import TeacherChat from "../components/TeacherChat/TeacherChat";
 import EmpathyMapCanvas from "../components/PersonaBuilder/EmpathyMapCanvas";
 import PersonaPanel from "../components/PersonaBuilder/PersonaPanel";
 import POVDefineCanvas from "../components/DesignCanvas/POVDefineCanvas";
@@ -62,6 +63,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const [activeMobileView, setActiveMobileView] = useState("chat"); // "chat" or "canvas"
   const [projectToDelete, setProjectToDelete] = useState(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isTeacherChatOpen, setIsTeacherChatOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState("pdf"); // pdf, md, json
   const [exportScope, setExportScope] = useState("full"); // full, chat, canvas
   const [includeAISummary, setIncludeAISummary] = useState(false);
@@ -572,6 +574,19 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             </>
           )}
 
+          {/* Teacher Chat Button (Visible to Teacher in Review Mode) */}
+          {isReadOnly && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTeacherChatOpen(true)}
+              className={`hidden lg:flex ml-2 h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30`}
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span>Teacher Chat</span>
+            </Button>
+          )}
+
           {!isReadOnly && activeProject && (
             <>
               {/* FULL (lg+): separate Team and Team Chat buttons */}
@@ -601,6 +616,16 @@ export default function WorkspacePage({ theme, toggleTheme }) {
                   <MessageSquare className="h-4 w-4" />
                   <span>Team Chat</span>
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsTeacherChatOpen(true)}
+                  className="h-8 gap-1.5 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer shrink-0"
+                  title="Teacher chat"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Teacher Chat</span>
+                </Button>
               </div>
 
               {/* COMPACT (below lg): single Team dropdown for both actions */}
@@ -624,6 +649,9 @@ export default function WorkspacePage({ theme, toggleTheme }) {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsTeamChatOpen(true)}>
                       <MessageSquare className="h-4 w-4" /> Team Chat
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsTeacherChatOpen(true)}>
+                      <MessageSquare className="h-4 w-4" /> Teacher Chat
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -786,6 +814,13 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               </div>
 
             </section>
+            
+            <TeacherChat 
+              isOpen={isTeacherChatOpen}
+              onClose={() => setIsTeacherChatOpen(false)}
+              projectId={activeProject?.id}
+              currentUserId={usersService.getCurrentUser()?.id}
+            />
           </div>
 
         </main>

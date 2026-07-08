@@ -822,7 +822,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                       <TableHead className="text-zinc-500 font-medium hidden md:table-cell w-[18%]">Course</TableHead>
                       <TableHead className="text-zinc-500 font-medium hidden md:table-cell w-[18%]">Challenge</TableHead>
                       <TableHead className="text-zinc-500 font-medium">Phase</TableHead>
-                      <TableHead className="text-zinc-500 font-medium hidden md:table-cell">AI Creativity</TableHead>
+
                       <TableHead className="text-zinc-500 font-medium hidden md:table-cell">Teamwork</TableHead>
                       <TableHead className="text-zinc-500 font-medium hidden lg:table-cell">Last Active</TableHead>
                       <TableHead className="text-zinc-500 font-medium text-right">Actions</TableHead>
@@ -864,7 +864,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                                 <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{PhaseData.label}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">{renderStatusBadge(project.creativityScore || "Not Evaluated", 'creativity')}</TableCell>
+
                             <TableCell className="hidden md:table-cell align-top">
                               {project.memberCount > 0 ? (
                                 <div className="space-y-1.5">
