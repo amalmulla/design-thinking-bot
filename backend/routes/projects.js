@@ -174,7 +174,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, currentPhase, unlockedPhases, progressPercentage, personas, canvasData, message, messages, needsTeacherReview } = req.body;
+    const { name, currentPhase, unlockedPhases, progressPercentage, personas, canvasData, message, messages, needsTeacherReview, courseId } = req.body;
 
     const project = await Project.findById(id);
     if (!project) {
@@ -213,6 +213,10 @@ router.put('/:id', async (req, res) => {
       project.needsTeacherReview = true;
     }
     
+    if (courseId !== undefined) {
+      project.courseId = courseId;
+    }
+
     project.lastUpdated = Date.now();
 
     await project.save();
