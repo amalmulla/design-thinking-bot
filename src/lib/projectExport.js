@@ -35,12 +35,19 @@ export function exportProjectJSON(project) {
   triggerDownload(blob, `project-${getSlug(project.title)}-${formatDate()}.json`);
 }
 
-export function exportProjectMarkdown(project, includeChat, includeCanvases) {
+export function exportProjectMarkdown(project, includeChat, includeCanvases, summary = null) {
   let md = `# Project Export: ${project.title || 'Untitled'}\n\n`;
   md += `**Phase:** ${project.currentPhase || 'Unknown'}\n`;
-  md += `**Student Name:** ${project.studentName || project.studentId || 'Unknown'}\n`;
+  
+  const allMembers = [project.studentName || project.studentId || 'Unknown', ...(project.memberNames || [])].filter(Boolean);
+  md += `**Team Members:** ${allMembers.join(', ')}\n`;
+  
   md += `**Exported On:** ${new Date().toLocaleString()}\n\n`;
   md += `---\n\n`;
+
+  if (summary) {
+    md += `## AI Progress Summary\n\n${summary}\n\n---\n\n`;
+  }
 
   if (includeCanvases && Array.isArray(project.personas) && project.personas.length > 0) {
     md += `## Personas\n\n`;
@@ -98,10 +105,10 @@ export function exportProjectMarkdown(project, includeChat, includeCanvases) {
     } else {
       project.messages.forEach(msg => {
         const speaker = msg.role === 'ai' ? 'Design AI' : 'Student';
-        const time = msg.timestamp ? ` — ${msg.timestamp}` : '';
-        md += `**${speaker}${time}**\n\n${msg.content}\n\n`;
+        md += `**${speaker}** _(${msg.timestamp || ''})_\n`;
+        md += `${msg.content}\n\n`;
         if (msg.unlockedPhase) {
-          md += `> 🏆 **Achievement Unlocked:** The student successfully unlocked the **${msg.unlockedPhase.toUpperCase()}** phase!\n\n`;
+          md += `**UNLOCKED PHASE: ${msg.unlockedPhase.toUpperCase()}**\n\n`;
         }
       });
     }
@@ -111,21 +118,40 @@ export function exportProjectMarkdown(project, includeChat, includeCanvases) {
   triggerDownload(blob, `project-${getSlug(project.title)}-${formatDate()}.md`);
 }
 
-export function exportProjectPDF(project, includeChat, includeCanvases) {
+export function exportProjectPDF(project, includeChat, includeCanvases, summary = null) {
   const doc = new jsPDF();
-  let yPos = 20;
   
-  doc.setFontSize(18);
-  doc.text(`Project Export: ${project.title || 'Untitled'}`, 14, yPos);
+  doc.setFontSize(22);
+  doc.text(project.title || 'Untitled Project', 14, 20);
+  
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text(`Phase: ${project.currentPhase || 'Unknown'}`, 14, 30);
+  
+  const allMembers = [project.studentName || project.studentId || 'Unknown', ...(project.memberNames || [])].filter(Boolean);
+  doc.text(`Team Members: ${allMembers.join(', ')}`, 14, 36);
+  
+  let yPos = 42;
+  doc.text(`Exported On: ${new Date().toLocaleString()}`, 14, yPos);
   yPos += 10;
   
-  doc.setFontSize(12);
-  doc.text(`Phase: ${project.currentPhase || 'Unknown'}`, 14, yPos);
-  yPos += 8;
-  doc.text(`Student Name: ${project.studentName || project.studentId || 'Unknown'}`, 14, yPos);
-  yPos += 8;
-  doc.text(`Exported On: ${new Date().toLocaleString()}`, 14, yPos);
-  yPos += 15;
+  doc.setTextColor(0);
+
+  if (summary) {
+    if (yPos > 250) { doc.addPage(); yPos = 20; }
+    doc.setFontSize(16);
+    doc.text('AI Progress Summary', 14, yPos);
+    yPos += 10;
+    
+    autoTable(doc, {
+      startY: yPos,
+      body: [[summary]],
+      theme: 'grid',
+      styles: { overflow: 'linebreak', fillColor: [249, 250, 251], textColor: [31, 41, 55], fontSize: 11 },
+      margin: { left: 14, right: 14 }
+    });
+    yPos = doc.lastAutoTable.finalY + 15;
+  }
 
   if (includeCanvases && Array.isArray(project.personas) && project.personas.length > 0) {
     if (yPos > 260) { doc.addPage(); yPos = 20; }
@@ -233,13 +259,18 @@ export function exportProjectPDF(project, includeChat, includeCanvases) {
     doc.text('Chat Conversation', 14, yPos);
     yPos += 10;
     
-    const chatData = project.messages.map(msg => {
+    const chatData = [];
+    project.messages.forEach(msg => {
       const speaker = msg.role === 'ai' ? 'Design AI' : 'Student';
       let cleanContent = cleanMarkdown(msg.content);
+      chatData.push([`${speaker}\n${msg.timestamp || ''}`, cleanContent]);
+      
       if (msg.unlockedPhase) {
-        cleanContent += `\n\n[🏆 UNLOCKED PHASE: ${msg.unlockedPhase.toUpperCase()}]`;
+        chatData.push([
+          { content: '', styles: { fillColor: [255, 255, 255] } }, 
+          { content: `NEW PHASE UNLOCKED: ${msg.unlockedPhase.toUpperCase()}`, styles: { fontStyle: 'bold', textColor: [218, 165, 32], fillColor: [255, 250, 240] } }
+        ]);
       }
-      return [`${speaker}\n${msg.timestamp || ''}`, cleanContent];
     });
     
     autoTable(doc, {

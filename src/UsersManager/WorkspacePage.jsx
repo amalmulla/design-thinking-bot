@@ -18,7 +18,7 @@ import { usersService } from "./usersService";
 import { apiService } from "../lib/apiService";
 import { getRandomPrompt } from "../components/ChatBot/socraticQuestions";
 import { createChatMessage } from "../lib/dataModels";
-import { getSocraticChatCompletion } from "../lib/aiService";
+import { getSocraticChatCompletion, generateProjectSummary } from "../lib/aiService";
 import { exportProjectJSON, exportProjectMarkdown, exportProjectPDF } from "../lib/projectExport";
 
 // Modular Workspace Components
@@ -64,9 +64,11 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState("pdf"); // pdf, md, json
   const [exportScope, setExportScope] = useState("full"); // full, chat, canvas
+  const [includeAISummary, setIncludeAISummary] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Simulated Read-Only state for Teacher Review
-  const isReadOnly = window.location.pathname.includes('/teacher/review/');
+  // Simulated Read-Only state for Teacher Review and Archived Projects
+  const isReadOnly = window.location.pathname.includes('/teacher/review/') || activeProject?.isArchived;
 
   // Sync state on project loading
   useEffect(() => {
@@ -317,25 +319,33 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     setIsExportModalOpen(true);
   };
 
-  const handleExportConfirm = () => {
+  const handleExportConfirm = async () => {
     try {
+      setIsExporting(true);
       const includeChat = exportScope === 'full' || exportScope === 'chat';
       const includeCanvases = exportScope === 'full' || exportScope === 'canvas';
       
       const projectData = { ...activeProject, messages };
+      
+      let summaryText = null;
+      if (includeAISummary && exportFormat !== 'json') {
+        summaryText = await generateProjectSummary(projectData);
+      }
 
       if (exportFormat === 'json') {
         exportProjectJSON(projectData);
       } else if (exportFormat === 'md') {
-        exportProjectMarkdown(projectData, includeChat, includeCanvases);
+        exportProjectMarkdown(projectData, includeChat, includeCanvases, summaryText);
       } else if (exportFormat === 'pdf') {
-        exportProjectPDF(projectData, includeChat, includeCanvases);
+        exportProjectPDF(projectData, includeChat, includeCanvases, summaryText);
       }
 
       setIsExportModalOpen(false);
     } catch (err) {
       console.error("Export error:", err);
       alert("Failed to export: " + err.message);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -537,9 +547,29 @@ export default function WorkspacePage({ theme, toggleTheme }) {
             {activeProject ? activeProject.title : "Design Thinking Project"}
           </h1>
           {isReadOnly && (
-            <Badge className="hidden lg:inline-flex bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100/50 gap-1.5 text-xs font-semibold py-0.5 px-2 capitalize shadow-sm select-none">
-              Review Mode (Read-Only)
-            </Badge>
+            <>
+              <Badge className="hidden lg:inline-flex bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100/50 gap-1.5 text-xs font-semibold py-0.5 px-2 capitalize shadow-sm select-none">
+                Review Mode (Read-Only)
+              </Badge>
+              {activeProject && (
+                <div className="hidden lg:flex items-center gap-1.5 ml-2 text-xs text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded-md px-2 py-1 bg-zinc-50 dark:bg-zinc-900/50 truncate max-w-sm">
+                  <Users className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">
+                    {activeProject.memberNames?.length > 0 ? (
+                      <>
+                        <span className="font-semibold text-zinc-700 dark:text-zinc-300 mr-1">Team:</span>
+                        {activeProject.studentName}, {activeProject.memberNames.join(', ')}
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-zinc-700 dark:text-zinc-300 mr-1">Student:</span>
+                        {activeProject.studentName || 'Unknown'}
+                      </>
+                    )}
+                  </span>
+                </div>
+              )}
+            </>
           )}
 
           {!isReadOnly && activeProject && (
@@ -793,6 +823,22 @@ export default function WorkspacePage({ theme, toggleTheme }) {
                   <option value="json">Raw JSON</option>
                 </select>
               </div>
+
+              {exportFormat !== 'json' && (
+                <div className="flex items-start gap-2 pt-2">
+                  <input 
+                    type="checkbox" 
+                    id="includeSummary" 
+                    checked={includeAISummary}
+                    onChange={(e) => setIncludeAISummary(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <label htmlFor="includeSummary" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
+                    Include AI Progress Summary
+                    <p className="text-xs font-normal text-zinc-500 dark:text-zinc-400 mt-0.5">Generates a fresh summary of the student's progress and insights (takes a few seconds).</p>
+                  </label>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3">
@@ -805,9 +851,10 @@ export default function WorkspacePage({ theme, toggleTheme }) {
               </Button>
               <Button 
                 onClick={handleExportConfirm}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
+                disabled={isExporting}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer disabled:opacity-50"
               >
-                Export
+                {isExporting ? "Exporting..." : "Export"}
               </Button>
             </div>
           </div>

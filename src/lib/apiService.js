@@ -87,6 +87,29 @@ export const apiService = {
     method: 'DELETE',
   }),
 
+  // Courses
+  getCourses: (teacherId) => fetchApi(teacherId ? `/api/courses?teacherId=${teacherId}` : '/api/courses'),
+  getStudentCourses: (studentId) => fetchApi(`/api/courses/student/${studentId}`),
+  createCourse: (courseData) => fetchApi('/api/courses', {
+    method: 'POST',
+    body: JSON.stringify(courseData),
+  }),
+  updateCourse: (id, courseData) => fetchApi(`/api/courses/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(courseData),
+  }),
+  deleteCourse: (id) => fetchApi(`/api/courses/${id}`, {
+    method: 'DELETE',
+  }),
+  enrollInCourse: (id, studentId) => fetchApi(`/api/courses/${id}/enroll`, {
+    method: 'POST',
+    body: JSON.stringify({ studentId }),
+  }),
+  kickStudentFromCourse: (id, studentId) => fetchApi(`/api/courses/${id}/kick`, {
+    method: 'POST',
+    body: JSON.stringify({ studentId }),
+  }),
+
   // Users Management
   getAllUsers: () => fetchApi('/api/users'),
   getTeachers: () => fetchApi('/api/users/teachers'),

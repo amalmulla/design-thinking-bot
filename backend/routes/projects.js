@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Project = require('../models/Project');
 const Challenge = require('../models/Challenge');
+const Course = require('../models/Course');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 
@@ -53,22 +54,43 @@ router.get('/', async (req, res) => {
       query.$or = [{ studentId }, { members: studentId }];
     }
 
-    // Filter to projects whose challenge was created by this teacher (challenge -> project join).
+    // Filter to projects belonging to a course created by this teacher or a challenge created by this teacher
     if (teacherId) {
+      const ownedCourses = await Course.find({ teacherId }).distinct('_id');
       const ownedChallengeIds = await Challenge.find({ createdByTeacherId: teacherId }).distinct('_id');
-      query.challengeId = { $in: ownedChallengeIds.map((id) => id.toString()) };
+      
+      const teacherCondition = {
+        $or: [
+          { courseId: { $in: ownedCourses.map((id) => id.toString()) } },
+          { challengeId: { $in: ownedChallengeIds.map((id) => id.toString()) } }
+        ],
+        isArchived: { $ne: true }
+      };
+
+      if (query.$or) {
+        query = { $and: [{ $or: query.$or }, teacherCondition] };
+      } else {
+        query = { ...query, ...teacherCondition };
+      }
     }
 
     const projects = await Project.find(query).lean();
 
-    // Enrich each project with its challenge title and owning teacher's name so the
-    // student portfolio and teacher table can display them without extra lookups.
+    // Enrich each project with its challenge title, course title, and owning teacher's name.
     const challengeIds = onlyValidIds([...new Set(projects.map((p) => p.challengeId).filter(Boolean))]);
     const challenges = await Challenge.find({ _id: { $in: challengeIds } }).lean();
     const challengeMap = {};
     challenges.forEach((c) => { challengeMap[c._id.toString()] = c; });
 
-    const teacherIds = onlyValidIds([...new Set(challenges.map((c) => c.createdByTeacherId).filter(Boolean))]);
+    const courseIds = onlyValidIds([...new Set(projects.map((p) => p.courseId).filter(Boolean))]);
+    const courses = await Course.find({ _id: { $in: courseIds } }).lean();
+    const courseMap = {};
+    courses.forEach((c) => { courseMap[c._id.toString()] = c; });
+
+    const teacherIds = onlyValidIds([
+      ...new Set(challenges.map((c) => c.createdByTeacherId).filter(Boolean)),
+      ...new Set(courses.map((c) => c.teacherId).filter(Boolean))
+    ]);
     const teachers = await User.find({ _id: { $in: teacherIds } }).select('name').lean();
     const teacherMap = {};
     teachers.forEach((t) => { teacherMap[t._id.toString()] = t.name; });
@@ -83,10 +105,12 @@ router.get('/', async (req, res) => {
 
     const enriched = projects.map((p) => {
       const challenge = challengeMap[p.challengeId];
-      const ownerTeacherId = challenge ? challenge.createdByTeacherId : null;
+      const course = courseMap[p.courseId];
+      const ownerTeacherId = course ? course.teacherId : (challenge ? challenge.createdByTeacherId : null);
       return {
         ...p,
         challengeTitle: challenge ? challenge.title : null,
+        courseTitle: course ? course.title : null,
         teacherId: ownerTeacherId,
         teacherName: ownerTeacherId ? (teacherMap[ownerTeacherId] || null) : null,
         studentName: p.studentId ? (studentMap[p.studentId] || null) : null,
@@ -124,11 +148,12 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { studentId, challengeId, name } = req.body;
+    const { studentId, challengeId, courseId, name } = req.body;
 
     const newProject = new Project({
       studentId,
-      challengeId,
+      challengeId: challengeId || undefined,
+      courseId: courseId || undefined,
       name: name || 'Untitled Project',
       currentPhase: 'empathize',
       unlockedPhases: ['empathize'],

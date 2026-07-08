@@ -14,6 +14,7 @@ const challengesRouter = require('./routes/challenges');
 const projectsRouter = require('./routes/projects');
 const usersRouter = require('./routes/users');
 const aiRouter = require('./routes/ai');
+const coursesRouter = require('./routes/courses');
 const path = require('path');
 
 const app = express();
@@ -52,6 +53,7 @@ app.use('/api/challenges', challengesRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/courses', coursesRouter);
 
 // --- Realtime (Socket.io) ---
 // Deliberately isolated: if any of this throws, we log and continue so the REST API

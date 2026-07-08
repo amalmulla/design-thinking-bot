@@ -38,7 +38,8 @@ const projectSchema = new mongoose.Schema({
   studentId: { type: String, required: true },
   // Collaborators invited to co-edit the project. Does NOT include the owner (studentId).
   members: { type: [String], default: [] },
-  challengeId: { type: String, required: true },
+  courseId: { type: String }, // Optional: If assigned to a course
+  challengeId: { type: String }, // Optional: independent projects might not have one
   name: { type: String, default: 'Untitled Project' },
   currentPhase: {
     type: String,
@@ -56,7 +57,8 @@ const projectSchema = new mongoose.Schema({
   messages: [messageSchema],
   teamMessages: [teamMessageSchema],
   lastUpdated: { type: Date, default: Date.now },
-  needsTeacherReview: { type: Boolean, default: false }
+  needsTeacherReview: { type: Boolean, default: false },
+  isArchived: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('Project', projectSchema);

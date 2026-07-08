@@ -2,7 +2,7 @@ import { SOCRATIC_PROMPTS, getRandomPrompt } from "../components/ChatBot/socrati
 
 // Base URL of the backend API; the AI request is proxied through it so the Cerebras
 // key stays server-side and is never exposed to the browser.
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 // Ordered Design Thinking phases, used to tell the AI which phase comes next.
 const PHASE_ORDER = ["empathize", "define", "ideate", "prototype", "test"];
@@ -214,7 +214,7 @@ To unlock the next phase, the user MUST meet BOTH of these criteria:
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: JSON.stringify({
-        model: "gpt-oss-120b",
+        model: "llama3.1-8b",
         messages: formattedMessages,
         temperature: 0.7
       })
@@ -240,3 +240,67 @@ To unlock the next phase, the user MUST meet BOTH of these criteria:
     return getRandomPrompt(phase);
   }
 }
+
+/**
+ * Generates an AI summary of the student's progress across the entire project.
+ * Uses the canvas data and chat history to provide a high-level overview.
+ *
+ * @param {Object} project - The project object containing canvasData, messages, and personas
+ * @returns {Promise<string>} The generated markdown summary
+ */
+export async function generateProjectSummary(project) {
+  if (!project) return "No project data available.";
+
+  try {
+    const allPhases = ["empathize", "define", "ideate", "prototype", "test"];
+    let combinedCanvasSummary = "Project Canvas State:\n\n";
+    allPhases.forEach(phase => {
+      const summary = summarizeCanvasForPhase(phase, project.canvasData);
+      if (summary) {
+        combinedCanvasSummary += `--- ${phase.toUpperCase()} ---\n${summary}\n\n`;
+      }
+    });
+
+    const personaSummary = summarizePersonas(project.personas);
+    if (personaSummary) {
+      combinedCanvasSummary += `--- PERSONAS ---\n${personaSummary}\n\n`;
+    }
+
+    const systemPrompt = `You are an AI Design Thinking instructor evaluating a student's project. 
+Your task is to write a brief, insightful summary (2-3 paragraphs) of the student's progress so far.
+Evaluate the quality of their work based on the provided canvas data and personas. 
+Highlight what they did well and point out areas where they could think deeper. 
+Format your response in clean Markdown. Avoid mentioning the chat history directly, focus on the actual work produced in the canvases.`;
+
+    const formattedMessages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Please summarize the student's progress based on this current project state:\n\n${combinedCanvasSummary}` }
+    ];
+
+    const token = sessionStorage.getItem("token");
+    const response = await fetch(`${API_URL}/api/ai/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        model: "llama3.1-8b",
+        messages: formattedMessages,
+        temperature: 0.5
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`AI proxy returned status ${response.status}: ${errorData}`);
+    }
+
+    const data = await response.json();
+    return data.content || "Summary could not be generated.";
+  } catch (error) {
+    console.error("[Socratic AI] Summary generation failed:", error);
+    return "The AI summary could not be generated at this time.";
+  }
+}
+

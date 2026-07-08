@@ -27,7 +27,7 @@ router.post('/chat', requireAuth, async (req, res) => {
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: model || 'gpt-oss-120b',
+        model: model || 'llama3.1-8b',
         messages,
         temperature: typeof temperature === 'number' ? temperature : 0.7
       })
