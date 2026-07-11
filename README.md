@@ -94,10 +94,9 @@ CEREBRAS_API_KEY=<your-cerebras-api-key>
 PORT=3001
 ```
 
-Seed sample challenges and projects (optional), then start the server:
+Start the server:
 
 ```bash
-npm run seed   # optional: inserts demo challenges + projects (does NOT create users)
 npm run dev    # starts the API on http://localhost:3001 (nodemon)
 ```
 
@@ -124,8 +123,14 @@ Start the dev server:
 npm run dev    # starts Vite on http://localhost:5173
 ```
 
-Open http://localhost:5173 and **register** a new account (the seed script does not
-create login users, so the first user must be created through the Register page).
+Open http://localhost:5173 and **register** a new account. Be sure to select the **Teacher** role on the registration form to access the teacher dashboard.
+
+### 3. Testing as a Teacher (Grading)
+
+To fully test the application from both perspectives:
+1. **Teacher Account**: Register an account and select the **Teacher** role. From the dashboard, create a new Design Challenge.
+2. **Student Account**: Open an incognito/private browsing window and register a second account, selecting the **Student** role.
+3. **Workflow**: As the student, join the challenge you just created and complete some work in the 5 phases. Return to your teacher window to review the student's progress and test the feedback loop.
 
 ## Environment Variables
 
@@ -193,7 +198,6 @@ redeploy the backend, so only your frontend can call the API.
 |-----------------|-------------|
 | `npm run dev`   | Start the API with nodemon |
 | `npm start`     | Start the API with node |
-| `npm run seed`  | Seed demo challenges and projects |
 
 ## Project Structure
 
@@ -209,7 +213,6 @@ redeploy the backend, so only your frontend can call the API.
 ├── backend/
 │   ├── server.js            # Express app + MongoDB connection
 │   ├── models/              # User, Project, Challenge (Mongoose schemas)
-│   ├── routes/              # auth, users, projects, challenges
-│   └── seed.js              # Sample data seeder
+│   └── routes/              # auth, users, projects, challenges
 └── docs/                    # Assignment brief + homework analysis
 ```
