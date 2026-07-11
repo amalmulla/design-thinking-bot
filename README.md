@@ -123,14 +123,7 @@ Start the dev server:
 npm run dev    # starts Vite on http://localhost:5173
 ```
 
-Open http://localhost:5173 and **register** a new account. Be sure to select the **Teacher** role on the registration form to access the teacher dashboard.
-
-### 3. Testing as a Teacher (Grading)
-
-To fully test the application from both perspectives:
-1. **Teacher Account**: Register an account and select the **Teacher** role. From the dashboard, create a new Design Challenge.
-2. **Student Account**: Open an incognito/private browsing window and register a second account, selecting the **Student** role.
-3. **Workflow**: As the student, join the challenge you just created and complete some work in the 5 phases. Return to your teacher window to review the student's progress and test the feedback loop.
+Open http://localhost:5173 and **register** a new account or login. 
 
 ## Environment Variables
 
