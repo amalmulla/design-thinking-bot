@@ -184,6 +184,9 @@ export default function Dashboard({ theme, toggleTheme }) {
     setIsModalOpen(false);
   };
 
+  // Creates a project on either path: "A" derives title/course/challenge from the
+  // picked course challenge; "B" is independent (free title, no course/challenge).
+  // On success the new project is prepended locally and the user jumps straight in.
   const handleCreateStudentProject = async () => {
     let finalTitle = newTitle.trim();
     let finalChallengeId = selectedChallengeId;
@@ -238,6 +241,7 @@ export default function Dashboard({ theme, toggleTheme }) {
     }
   };
 
+  // Permanently deletes the project picked in the confirm dialog (projectToDelete).
   const handleDeleteProject = async () => {
     if (!projectToDelete) return;
     try {
@@ -330,6 +334,7 @@ export default function Dashboard({ theme, toggleTheme }) {
   };
 
   // Teacher Course Actions
+  // Creates a new course or updates the one being edited (title + assigned challenges).
   const handleSaveCourse = async () => {
     if (!courseTitle.trim()) return;
     try {
@@ -356,6 +361,8 @@ export default function Dashboard({ theme, toggleTheme }) {
     } catch (e) { console.error(e); }
   };
   
+  // Deletes the course being edited. Only reachable for empty courses — the modal
+  // hides the delete button once any student is enrolled.
   const handleDeleteCourse = async () => {
     if (!editingCourseId) return;
     try {
@@ -368,6 +375,7 @@ export default function Dashboard({ theme, toggleTheme }) {
   };
 
   // Teacher Actions
+  // Creates a new design challenge or updates the one being edited (title + brief).
   const handleSaveChallenge = async () => {
     if (!newTitle.trim()) return;
     try {
@@ -398,6 +406,8 @@ export default function Dashboard({ theme, toggleTheme }) {
     }
   };
 
+  // Deletes the challenge being edited. Only reachable when no team is working on
+  // it (teamCount === 0) — the modal hides the delete button otherwise.
   const handleDeleteChallenge = async () => {
     if (!editingChallengeId) return;
     try {

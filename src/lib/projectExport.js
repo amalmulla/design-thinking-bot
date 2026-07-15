@@ -29,12 +29,28 @@ const cleanMarkdown = (text) => {
     .trim();
 };
 
+/**
+ * Downloads the raw project object as a pretty-printed JSON file.
+ * Used for data backup / machine-readable export; no formatting applied.
+ *
+ * @param {Object} project - The full project (canvasData, personas, messages, ...)
+ */
 export function exportProjectJSON(project) {
   const jsonStr = JSON.stringify(project, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
   triggerDownload(blob, `project-${getSlug(project.title)}-${formatDate()}.json`);
 }
 
+/**
+ * Builds a Markdown report of the project — header with team + phase, then
+ * (optionally) personas, every phase canvas, and the full Socratic chat log —
+ * and downloads it as a .md file.
+ *
+ * @param {Object} project - The full project object
+ * @param {boolean} includeChat - Append the AI chat conversation section
+ * @param {boolean} includeCanvases - Append the personas + phase canvases sections
+ * @param {string|null} summary - Optional AI-generated progress summary to lead with
+ */
 export function exportProjectMarkdown(project, includeChat, includeCanvases, summary = null) {
   let md = `# Project Export: ${project.title || 'Untitled'}\n\n`;
   md += `**Phase:** ${project.currentPhase || 'Unknown'}\n`;
@@ -118,6 +134,17 @@ export function exportProjectMarkdown(project, includeChat, includeCanvases, sum
   triggerDownload(blob, `project-${getSlug(project.title)}-${formatDate()}.md`);
 }
 
+/**
+ * Renders the project as a formatted PDF using jsPDF + autoTable: title header,
+ * optional AI summary, personas table, one table per phase canvas, and the chat
+ * transcript. Page breaks are handled manually via the running yPos cursor
+ * (a new page is started whenever a section would overflow ~A4 height).
+ *
+ * @param {Object} project - The full project object
+ * @param {boolean} includeChat - Append the chat transcript table
+ * @param {boolean} includeCanvases - Append the personas + phase canvas tables
+ * @param {string|null} summary - Optional AI-generated progress summary to lead with
+ */
 export function exportProjectPDF(project, includeChat, includeCanvases, summary = null) {
   const doc = new jsPDF();
   
@@ -288,6 +315,8 @@ export function exportProjectPDF(project, includeChat, includeCanvases, summary 
   doc.save(`project-${getSlug(project.title)}-${formatDate()}.pdf`);
 }
 
+// Browser download helper: creates a temporary object URL + hidden <a> element,
+// clicks it, and cleans both up so no DOM nodes or blob URLs leak.
 function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

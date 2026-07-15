@@ -136,6 +136,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     fetchWorkspaceData();
   }, [projectId]);
 
+  // Switches the visible phase and (for editable projects) persists the new
+  // currentPhase + mapped progress percentage to the server.
   const handlePhaseChange = async (newPhase) => {
     setCurrentPhase(newPhase);
     // "personas" is a setup view, not a persisted Design Thinking phase — never write it to the DB.
@@ -178,6 +180,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     }
   };
 
+  // Permanently deletes the project confirmed in the dialog, then navigates to the
+  // next remaining project (or back to the dashboard if none are left).
   const handleDeleteProject = async () => {
     if (!projectToDelete) return;
     try {
@@ -208,6 +212,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     } : prev);
   };
 
+  // Owner-only: invites a collaborator by email; the server resolves the email to a
+  // user and returns the updated member list.
   const handleInviteMember = async () => {
     const email = inviteEmail.trim();
     if (!email || !activeProject) return;
@@ -224,6 +230,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     }
   };
 
+  // Removes a collaborator (owner action) or lets the current user leave the
+  // project themselves — leaving also navigates back to the dashboard.
   const handleRemoveMember = async (userId) => {
     if (!activeProject) return;
     const leaving = userId === currentUser?.id;
@@ -244,6 +252,9 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     }
   };
 
+  // Sends a student message to the Socratic bot: shows it optimistically, persists
+  // it, calls the AI with the live canvas as context, and handles the
+  // [UNLOCK_NEXT_PHASE] marker the AI appends when the phase is complete.
   const handleSendMessage = async (text) => {
     if (!text.trim() || !activeProject || isReadOnly || isAiTyping) return;
     
@@ -324,6 +335,8 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     setIsExportModalOpen(true);
   };
 
+  // Runs the export chosen in the dialog: optionally generates a fresh AI progress
+  // summary first, then delegates to the matching lib/projectExport function.
   const handleExportConfirm = async () => {
     try {
       setIsExporting(true);
@@ -380,6 +393,10 @@ export default function WorkspacePage({ theme, toggleTheme }) {
   const testQuestions = canvasData.test?.questions || "";
   const testIdeas = canvasData.test?.ideas || "";
 
+  // Single write path for every canvas tool: merges the edited field into the
+  // phase's slice of canvasData and persists the whole object to the server.
+  // Called by EmpathyMapCanvas, POVDefineCanvas, IdeationStickyNotes,
+  // UploadPrototype, and TestFeedbackGrid on each change.
   const updateCanvasData = async (phase, fieldOrValue, value) => {
     if (!activeProject || isReadOnly) return;
 
