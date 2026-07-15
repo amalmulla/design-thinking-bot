@@ -21,10 +21,11 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { title, description, createdByTeacherId, status } = req.body;
+    const { title, description, aiGuidance, createdByTeacherId, status } = req.body;
     const newChallenge = new Challenge({
       title,
       description,
+      aiGuidance: aiGuidance || '',
       createdByTeacherId,
       status: status || 'Active'
     });
@@ -40,11 +41,11 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, status } = req.body;
+    const { title, description, aiGuidance, status } = req.body;
 
     const updatedChallenge = await Challenge.findByIdAndUpdate(
       id,
-      { title, description, status },
+      { title, description, aiGuidance, status },
       { new: true }
     );
 

@@ -278,7 +278,7 @@ export default function WorkspacePage({ theme, toggleTheme }) {
     try {
       // During persona setup there is no Design Thinking phase yet; frame the bot around empathy.
       const effectivePhase = currentPhase === "personas" ? "empathize" : currentPhase;
-      let aiResponseText = await getSocraticChatCompletion(newMessages, effectivePhase, activeProject?.canvasData || {}, activeProject?.personas || []);
+      let aiResponseText = await getSocraticChatCompletion(newMessages, effectivePhase, activeProject?.canvasData || {}, activeProject?.personas || [], activeProject?.challengeGuidance || "");
       
       let shouldUnlockNext = false;
       if (aiResponseText.includes('[UNLOCK_NEXT_PHASE]')) {

@@ -19,6 +19,7 @@ export default function ProjectModal({
   courses,
   newTitle, setNewTitle,
   newDesc, setNewDesc,
+  newGuidance, setNewGuidance,
   projectPath, setProjectPath,
   selectedCourseId, setSelectedCourseId,
   selectedChallengeId, setSelectedChallengeId,
@@ -61,15 +62,30 @@ export default function ProjectModal({
           )}
 
           {isTeacher ? (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Brief & Objectives</label>
-              <textarea
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-                className="w-full h-32 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-3 text-zinc-800 dark:text-zinc-200 text-sm focus:ring-1 focus:ring-indigo-500 dark:focus:ring-zinc-700 outline-none resize-none"
-                placeholder="Enter challenge description, constraints, and learning goals..."
-              />
-            </div>
+            <>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Brief & Objectives</label>
+                <textarea
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  className="w-full h-24 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-3 text-zinc-800 dark:text-zinc-200 text-sm focus:ring-1 focus:ring-indigo-500 dark:focus:ring-zinc-700 outline-none resize-none"
+                  placeholder="Enter challenge description, constraints, and learning goals..."
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Guidance for the AI Mentor</label>
+                <textarea
+                  value={newGuidance}
+                  onChange={(e) => setNewGuidance(e.target.value)}
+                  className="w-full h-24 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-3 text-zinc-800 dark:text-zinc-200 text-sm focus:ring-1 focus:ring-indigo-500 dark:focus:ring-zinc-700 outline-none resize-none"
+                  placeholder="e.g. Steer students toward sustainability trade-offs and real-world cost constraints; challenge assumptions about who the end user really is."
+                />
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                  What should the Socratic bot emphasize for this challenge? This steers the bot's focus for every project based on it. Leave blank to use the default mentor behavior.
+                </p>
+              </div>
+            </>
           ) : (
             <>
               <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg mb-4">

@@ -143,6 +143,7 @@ provided by this repo.
 | `MONGODB_URI`       | Yes      | Your MongoDB Atlas connection string (with your DB user + password) |
 | `JWT_SECRET`        | Yes      | A long random string you choose, used to sign JWT session tokens |
 | `CEREBRAS_API_KEY`  | No       | Your Cerebras API key; if absent, the AI uses simulated prompts. Never exposed to the browser |
+| `CEREBRAS_MODEL`    | No       | Cerebras model id (default `gpt-oss-120b`). Change this if Cerebras renames/retires a model — no code change needed |
 | `CLIENT_ORIGIN`     | No       | Restrict CORS to this frontend origin (e.g. your Vercel URL); allows all if unset |
 | `PORT`              | No       | API port (defaults to `3001`; Render sets this automatically) |
 

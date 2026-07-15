@@ -154,6 +154,8 @@ export default function Dashboard({ theme, toggleTheme }) {
 
   // Teacher Modal Inputs & States
   const [newDesc, setNewDesc] = useState("");
+  // Optional per-challenge guidance injected into the AI mentor's prompt.
+  const [newGuidance, setNewGuidance] = useState("");
   const [editingChallengeId, setEditingChallengeId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState("All");
@@ -178,6 +180,7 @@ export default function Dashboard({ theme, toggleTheme }) {
 
   const resetProjectModal = () => {
     setNewTitle("");
+    setNewGuidance("");
     setSelectedChallengeId("");
     setSelectedCourseId("");
     setProjectPath("A");
@@ -382,7 +385,8 @@ export default function Dashboard({ theme, toggleTheme }) {
       if (editingChallengeId) {
         const updatedRaw = await apiService.updateChallenge(editingChallengeId, {
           title: newTitle.trim(),
-          description: newDesc.trim()
+          description: newDesc.trim(),
+          aiGuidance: newGuidance.trim()
         });
         const updatedChallenge = { ...updatedRaw, id: updatedRaw._id || updatedRaw.id };
         setChallenges(challenges.map(c => c.id === editingChallengeId ? updatedChallenge : c));
@@ -390,15 +394,17 @@ export default function Dashboard({ theme, toggleTheme }) {
         const newChallengeRaw = await apiService.createChallenge({
           title: newTitle.trim(),
           description: newDesc.trim(),
+          aiGuidance: newGuidance.trim(),
           createdByTeacherId: currentUser?.id
         });
-        
+
         const newChallenge = { ...newChallengeRaw, id: newChallengeRaw._id || newChallengeRaw.id };
         setChallenges([...challenges, newChallenge]);
       }
-      
+
       setNewTitle("");
       setNewDesc("");
+      setNewGuidance("");
       setEditingChallengeId(null);
       setIsModalOpen(false);
     } catch (err) {
@@ -694,6 +700,7 @@ export default function Dashboard({ theme, toggleTheme }) {
                           onClick={() => {
                             setNewTitle(challenge.title);
                             setNewDesc(challenge.description || "");
+                            setNewGuidance(challenge.aiGuidance || "");
                             setEditingChallengeId(challenge.id);
                             setIsModalOpen(true);
                           }}
@@ -1124,6 +1131,7 @@ export default function Dashboard({ theme, toggleTheme }) {
         courses={courses}
         newTitle={newTitle} setNewTitle={setNewTitle}
         newDesc={newDesc} setNewDesc={setNewDesc}
+        newGuidance={newGuidance} setNewGuidance={setNewGuidance}
         projectPath={projectPath} setProjectPath={setProjectPath}
         selectedCourseId={selectedCourseId} setSelectedCourseId={setSelectedCourseId}
         selectedChallengeId={selectedChallengeId} setSelectedChallengeId={setSelectedChallengeId}

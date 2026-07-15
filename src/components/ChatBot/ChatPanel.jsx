@@ -132,7 +132,9 @@ export default function ChatPanel({
       <div className="h-12 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center justify-between px-4 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Socratic Guide</span>
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            {isReadOnly ? "Student ↔ AI Conversation" : "Socratic Guide"}
+          </span>
         </div>
         {canExportChat && (
           <Button

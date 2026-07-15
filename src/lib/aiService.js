@@ -129,9 +129,10 @@ function summarizePersonas(personas) {
  * @param {string} phase - Active student Design Thinking phase ('empathize', 'define', 'ideate', 'prototype', 'test')
  * @param {Object} [canvasData] - The project's canvasData so the AI can read what the student filled in
  * @param {Array<Object>} [personas] - The project's personas, given to the AI as shared context in every phase
+ * @param {string} [challengeGuidance] - Optional teacher-authored guidance for the challenge this project belongs to
  * @returns {Promise<string>} Socratic markdown output text
  */
-export async function getSocraticChatCompletion(messages, phase, canvasData = {}, personas = []) {
+export async function getSocraticChatCompletion(messages, phase, canvasData = {}, personas = [], challengeGuidance = "") {
   try {
     // Retrieve custom Socratic prompts based on stage
     const samplePrompts = SOCRATIC_PROMPTS[phase] || SOCRATIC_PROMPTS["empathize"];
@@ -182,7 +183,13 @@ To unlock the next phase, the user MUST meet BOTH of these criteria:
       ? `\n\n[PROJECT PERSONAS]: These are the user personas this project is designed for. Ground your questions in them — challenge the student on how their current work serves (or neglects) these specific people:\n\n${personaSummary}`
       : "";
 
-    const liveStateText = `\n\n[SYSTEM OVERRIDE]: LIVE CANVAS STATE — this is the student's "${phase.toUpperCase()}" canvas EXACTLY as it stands right now. It is the single source of truth and OVERRIDES anything said earlier in this conversation about which sections are empty or filled (the canvas has been edited since then). Read it carefully before replying:\n\n${canvasSummary || `The "${phase.toUpperCase()}" canvas is still completely empty. Gently encourage them to make a first entry.`}${personaText}\n\n${advanceText}`;
+    // Teacher-authored guidance for this challenge. It is a thematic lens layered ON TOP of the
+    // Socratic methodology — never a license to abandon the phase logic or hand out answers.
+    const guidanceText = (challengeGuidance && challengeGuidance.trim())
+      ? `\n\n[CHALLENGE GUIDANCE FROM INSTRUCTOR]: This project is part of a design challenge set by the teacher. Weave the following focus into your Socratic questions where relevant — treat it as the thematic lens for this challenge, but do NOT abandon the phase methodology and do NOT give direct answers:\n\n${challengeGuidance.trim()}`
+      : "";
+
+    const liveStateText = `\n\n[SYSTEM OVERRIDE]: LIVE CANVAS STATE — this is the student's "${phase.toUpperCase()}" canvas EXACTLY as it stands right now. It is the single source of truth and OVERRIDES anything said earlier in this conversation about which sections are empty or filled (the canvas has been edited since then). Read it carefully before replying:\n\n${canvasSummary || `The "${phase.toUpperCase()}" canvas is still completely empty. Gently encourage them to make a first entry.`}${personaText}${guidanceText}\n\n${advanceText}`;
 
     // Format chat history for OpenAI-compatible Cerebras API
     // Cerebras/OpenAI format expects: { role: 'user' | 'assistant' | 'system', content: string }
@@ -214,7 +221,7 @@ To unlock the next phase, the user MUST meet BOTH of these criteria:
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: JSON.stringify({
-        model: "llama3.1-8b",
+        // Model is chosen server-side (CEREBRAS_MODEL env var) — see backend/routes/ai.js.
         messages: formattedMessages,
         temperature: 0.7
       })
@@ -285,7 +292,7 @@ Format your response in clean Markdown. Avoid mentioning the chat history direct
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: JSON.stringify({
-        model: "llama3.1-8b",
+        // Model is chosen server-side (CEREBRAS_MODEL env var) — see backend/routes/ai.js.
         messages: formattedMessages,
         temperature: 0.5
       })
