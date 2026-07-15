@@ -35,12 +35,22 @@ const withTeamNames = async (projectObj) => {
   const users = await User.find({ _id: { $in: ids } }).select('name email').lean();
   const nameById = {};
   users.forEach((u) => { nameById[u._id.toString()] = u.name; });
+
+  // If the project belongs to a design challenge, surface that challenge's teacher-authored
+  // AI guidance so the client can inject it into the Socratic bot's prompt.
+  let challengeGuidance = '';
+  if (projectObj.challengeId && onlyValidIds([projectObj.challengeId]).length) {
+    const challenge = await Challenge.findById(projectObj.challengeId).select('aiGuidance').lean();
+    challengeGuidance = challenge?.aiGuidance || '';
+  }
+
   return {
     ...projectObj,
     studentName: projectObj.studentId ? (nameById[projectObj.studentId] || null) : null,
     memberNames: (projectObj.members || []).map((id) => nameById[id]).filter(Boolean),
     // id+name pairs so the team panel can render a removable row per collaborator.
     memberList: (projectObj.members || []).map((id) => ({ id, name: nameById[id] || 'Unknown' })),
+    challengeGuidance,
   };
 };
 

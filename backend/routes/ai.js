@@ -5,6 +5,12 @@ const router = express.Router();
 
 const CEREBRAS_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
+// The Cerebras model is a single source of truth on the server, overridable via the
+// CEREBRAS_MODEL env var. If Cerebras retires or renames a model, change this env var
+// on the host (e.g. Render) and restart — no code change or redeploy needed. The
+// hardcoded value is only the fallback default.
+const CEREBRAS_MODEL = process.env.CEREBRAS_MODEL || 'gpt-oss-120b';
+
 // POST /api/ai/chat — server-side proxy to Cerebras. The frontend sends the fully
 // formed messages array; the API key stays here on the server and is never exposed.
 router.post('/chat', requireAuth, async (req, res) => {
@@ -14,7 +20,9 @@ router.post('/chat', requireAuth, async (req, res) => {
     return res.status(503).json({ message: 'AI is not configured on the server.' });
   }
 
-  const { messages, model, temperature } = req.body;
+  // The model is decided server-side (env var), not by the client, so there is one
+  // place to change it if Cerebras alters their lineup again.
+  const { messages, temperature } = req.body;
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ message: 'messages must be a non-empty array.' });
   }
@@ -27,7 +35,7 @@ router.post('/chat', requireAuth, async (req, res) => {
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: model || 'llama3.1-8b',
+        model: CEREBRAS_MODEL,
         messages,
         temperature: typeof temperature === 'number' ? temperature : 0.7
       })
