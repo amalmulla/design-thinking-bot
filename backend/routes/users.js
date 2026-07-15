@@ -2,8 +2,12 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+
+// All user-management routes (list, block, role, profile) require a valid JWT.
+router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   try {

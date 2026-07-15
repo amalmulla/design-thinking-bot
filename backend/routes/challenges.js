@@ -1,7 +1,11 @@
 const express = require('express');
 const Challenge = require('../models/Challenge');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+
+// All challenge routes require a valid JWT.
+router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   try {

@@ -2,7 +2,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Course = require('../models/Course');
 const Project = require('../models/Project');
+const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
+
+// All course routes (CRUD, enroll, kick) require a valid JWT.
+router.use(requireAuth);
 
 // Get courses by teacher
 router.get('/', async (req, res) => {
