@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { 
-  Plus, 
-  ArrowRight, 
-  Clock, 
-  Target, 
-  Lightbulb, 
-  Layers, 
-  FlaskConical, 
+  Plus,
+  ArrowRight,
+  Clock,
+  Target,
+  Layers,
   Users,
-  Brain,
-  Activity, 
+  Activity,
   CheckCircle2, 
   AlertCircle,
   Search,
@@ -46,70 +43,14 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 
-// --- MOCK DATA ---
-import { createStudentProject, createDesignChallenge } from "../lib/dataModels";
 import { usersService } from "./usersService";
 import { apiService } from "../lib/apiService";
-
-const PHASE_MAP = {
-  empathize: { label: "Empathize", icon: Users, color: "text-rose-400", bg: "bg-rose-400/10", border: "border-rose-400/20" },
-  define: { label: "Define", icon: Target, color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/20" },
-  ideate: { label: "Ideate", icon: Lightbulb, color: "text-yellow-400", bg: "bg-yellow-400/10", border: "border-yellow-400/20" },
-  prototype: { label: "Prototype", icon: Layers, color: "text-purple-400", bg: "bg-purple-400/10", border: "border-purple-400/20" },
-  test: { label: "Test", icon: FlaskConical, color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/20" },
-};
-
-const calculatePhaseProgress = (project) => {
-  if (!project || !project.canvasData) return 0;
-  const phase = project.currentPhase?.toLowerCase();
-  const data = project.canvasData;
-  let percent = 0;
-
-  switch (phase) {
-    case 'empathize': {
-      const e = data.empathize || {};
-      let filled = 0;
-      if (e.says?.length > 0) filled++;
-      if (e.thinks?.length > 0) filled++;
-      if (e.does?.length > 0) filled++;
-      if (e.feels?.length > 0) filled++;
-      percent = (filled / 4) * 100;
-      break;
-    }
-    case 'define': {
-      const d = data.define || {};
-      let filled = 0;
-      if (d.user?.trim()) filled++;
-      if (d.needs?.trim()) filled++;
-      if (d.insight?.trim()) filled++;
-      percent = (filled / 3) * 100;
-      break;
-    }
-    case 'ideate': {
-      const i = Array.isArray(data.ideate) ? data.ideate : [];
-      percent = Math.min((i.length / 3) * 100, 100);
-      break;
-    }
-    case 'prototype': {
-      const p = Array.isArray(data.prototypeData) ? data.prototypeData : (Array.isArray(data.prototype) ? data.prototype : []);
-      percent = p.length > 0 ? 100 : 0;
-      break;
-    }
-    case 'test': {
-      const t = data.test || {};
-      let filled = 0;
-      if (t.worked?.trim()) filled++;
-      if (t.improved?.trim()) filled++;
-      if (t.questions?.trim()) filled++;
-      if (t.ideas?.trim()) filled++;
-      percent = (filled / 4) * 100;
-      break;
-    }
-    default:
-      percent = 0;
-  }
-  return Math.round(percent);
-};
+// Phase display config + progress logic live in lib so every screen shares one source.
+import { PHASE_MAP, calculatePhaseProgress } from "../lib/phaseUtils";
+import ConfirmModal from "../components/ui/ConfirmModal";
+import ProjectModal from "./dashboard/ProjectModal";
+import CourseModal from "./dashboard/CourseModal";
+import EnrollModal from "./dashboard/EnrollModal";
 
 // --- MAIN COMPONENT ---
 export default function Dashboard({ theme, toggleTheme }) {
@@ -1164,373 +1105,77 @@ export default function Dashboard({ theme, toggleTheme }) {
         )}
       </main>
 
-      {/* OVERLAY MODAL (SHARED) */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md lg:max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex justify-between items-center select-none">
-              <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
-                {isTeacher ? <Target className="h-5 w-5 text-indigo-500" /> : <Brain className="h-5 w-5 text-pink-500" />}
-                {isTeacher ? (editingChallengeId ? "Edit Design Challenge" : "New Design Challenge") : "Start New Project"}
-              </h3>
-            </div>
-            
-            <div className="p-6 space-y-5">
-              {isTeacher && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">
-                    Challenge Title
-                  </label>
-                  <Input 
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="e.g. Eco-Packaging Design"
-                    className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus-visible:ring-blue-500 h-10"
-                  />
-                </div>
-              )}
+      {/* Create/edit modal — teacher challenges and student projects (extracted component) */}
+      <ProjectModal
+        isOpen={isModalOpen}
+        isTeacher={isTeacher}
+        editingChallengeId={editingChallengeId}
+        challenges={challenges}
+        courses={courses}
+        newTitle={newTitle} setNewTitle={setNewTitle}
+        newDesc={newDesc} setNewDesc={setNewDesc}
+        projectPath={projectPath} setProjectPath={setProjectPath}
+        selectedCourseId={selectedCourseId} setSelectedCourseId={setSelectedCourseId}
+        selectedChallengeId={selectedChallengeId} setSelectedChallengeId={setSelectedChallengeId}
+        onSaveChallenge={handleSaveChallenge}
+        onDeleteChallenge={handleDeleteChallenge}
+        onCreateProject={handleCreateStudentProject}
+        onCancel={() => {
+          setNewDesc("");
+          setEditingChallengeId(null);
+          resetProjectModal();
+        }}
+      />
 
-              {isTeacher ? (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Brief & Objectives</label>
-                  <textarea
-                    value={newDesc}
-                    onChange={(e) => setNewDesc(e.target.value)}
-                    className="w-full h-32 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-3 text-zinc-800 dark:text-zinc-200 text-sm focus:ring-1 focus:ring-indigo-500 dark:focus:ring-zinc-700 outline-none resize-none"
-                    placeholder="Enter challenge description, constraints, and learning goals..."
-                  />
-                </div>
-              ) : (
-                <>
-                  <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg mb-4">
-                    <button 
-                      onClick={() => setProjectPath("A")} 
-                      className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${projectPath === "A" ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
-                    >
-                      Course Project
-                    </button>
-                    <button 
-                      onClick={() => setProjectPath("B")} 
-                      className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${projectPath === "B" ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
-                    >
-                      Independent Project
-                    </button>
-                  </div>
+      {/* Teacher: create/edit course (extracted component) */}
+      <CourseModal
+        isOpen={isCourseModalOpen && isTeacher}
+        editingCourseId={editingCourseId}
+        courses={courses}
+        challenges={challenges}
+        courseTitle={courseTitle} setCourseTitle={setCourseTitle}
+        courseChallenges={courseChallenges} setCourseChallenges={setCourseChallenges}
+        onSave={handleSaveCourse}
+        onDelete={handleDeleteCourse}
+        onClose={() => {
+          setCourseTitle("");
+          setCourseChallenges([]);
+          setEditingCourseId(null);
+          setIsCourseModalOpen(false);
+        }}
+      />
 
-                  {projectPath === "B" ? (
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">
-                        Project Title
-                      </label>
-                      <Input 
-                        value={newTitle}
-                        onChange={(e) => setNewTitle(e.target.value)}
-                        placeholder="e.g. Smart Bins sorting system"
-                        className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus-visible:ring-blue-500 h-10"
-                      />
-                    </div>
-                  ) : (
-                    <>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Enrolled Course</label>
-                        {courses.length === 0 ? (
-                          <p className="text-xs text-rose-500 font-semibold select-none">You are not enrolled in any courses.</p>
-                        ) : (
-                          <select
-                            value={selectedCourseId}
-                            onChange={(e) => {
-                              setSelectedCourseId(e.target.value);
-                              setSelectedChallengeId("");
-                            }}
-                            className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                          >
-                            <option value="">— Choose a course —</option>
-                            {courses.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.title}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
+      {/* Student: enroll in a course (extracted component) */}
+      <EnrollModal
+        isOpen={isEnrollModalOpen && !isTeacher}
+        allCourses={allCourses}
+        enrolledCourses={courses}
+        enrollCourseId={enrollCourseId} setEnrollCourseId={setEnrollCourseId}
+        onEnroll={handleEnrollStudent}
+        onClose={() => {
+          setEnrollCourseId("");
+          setIsEnrollModalOpen(false);
+        }}
+      />
 
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Design Challenge</label>
-                        {!selectedCourseId ? (
-                          <p className="text-xs text-zinc-400 dark:text-zinc-500 italic select-none">Choose a course first to see its challenges.</p>
-                        ) : (() => {
-                          const course = courses.find(c => c.id === selectedCourseId);
-                          const courseChalls = course ? challenges.filter(c => (course.challenges || []).includes(c.id)) : [];
-                          if (courseChalls.length === 0) return <p className="text-xs text-rose-500 font-semibold select-none">This course has no challenges.</p>;
-                          
-                          const selectedChallenge = courseChalls.find(c => c.id === selectedChallengeId);
-                          
-                          return (
-                            <div className="space-y-3">
-                              <select
-                                value={selectedChallengeId}
-                                onChange={(e) => setSelectedChallengeId(e.target.value)}
-                                className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                              >
-                                <option value="">— Choose a challenge —</option>
-                                {courseChalls.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.title}
-                                  </option>
-                                ))}
-                              </select>
-                              
-                              {selectedChallenge && selectedChallenge.description && (
-                                <div className="p-3 bg-blue-50 dark:bg-zinc-800/50 rounded-lg border border-blue-100 dark:border-zinc-700/50">
-                                  <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                                    {selectedChallenge.description}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex items-center justify-end gap-3">
-              {isTeacher && editingChallengeId && (() => {
-                const ec = challenges.find(c => c.id === editingChallengeId);
-                return ec && ec.teamCount === 0;
-              })() && (
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteChallenge}
-                  className="mr-auto cursor-pointer"
-                >
-                  <Trash2 className="h-4 w-4 mr-1.5" />
-                  Delete Challenge
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setNewDesc("");
-                  setEditingChallengeId(null);
-                  resetProjectModal();
-                }}
-                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 h-9"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={isTeacher ? handleSaveChallenge : handleCreateStudentProject} 
-                disabled={isTeacher ? !newTitle.trim() : (projectPath === "A" ? (!selectedCourseId || !selectedChallengeId) : !newTitle.trim())}
-                className={`${isTeacher ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'} text-white shadow-sm h-9 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {isTeacher ? (editingChallengeId ? "Save Changes" : "Save Challenge") : "Launch Project"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE CONFIRMATION MODAL */}
-      {isCourseModalOpen && isTeacher && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex justify-between items-center select-none">
-              <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-indigo-500" />
-                {editingCourseId ? "Edit Course" : "New Course"}
-              </h3>
-            </div>
-            
-            <div className="p-6 space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Course Title</label>
-                <Input 
-                  value={courseTitle}
-                  onChange={(e) => setCourseTitle(e.target.value)}
-                  placeholder="e.g. Intro to Design Thinking"
-                  className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus-visible:ring-blue-500 h-10"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Assign Challenges</label>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                  {challenges.map(c => (
-                    <label key={c.id} className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer p-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-md">
-                      <input 
-                        type="checkbox" 
-                        checked={courseChallenges.includes(c.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) setCourseChallenges([...courseChallenges, c.id]);
-                          else setCourseChallenges(courseChallenges.filter(id => id !== c.id));
-                        }}
-                        className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      {c.title}
-                    </label>
-                  ))}
-                  {challenges.length === 0 && (
-                    <p className="text-xs text-zinc-500 italic">No challenges available to assign.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex items-center justify-end gap-3">
-              {editingCourseId && (() => {
-                const ec = courses.find(c => c.id === editingCourseId);
-                return ec && (ec.enrolledStudents || []).length === 0;
-              })() && (
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteCourse}
-                  className="mr-auto cursor-pointer"
-                >
-                  <Trash2 className="h-4 w-4 mr-1.5" />
-                  Delete Course
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setCourseTitle("");
-                  setCourseChallenges([]);
-                  setEditingCourseId(null);
-                  setIsCourseModalOpen(false);
-                }}
-                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 h-9"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSaveCourse} 
-                disabled={!courseTitle.trim()}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm h-9 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {editingCourseId ? "Save Changes" : "Save Course"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isEnrollModalOpen && !isTeacher && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4 flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-blue-500" />
-              Enroll in a Course
-            </h3>
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider select-none">Available Courses</label>
-                {allCourses.length === 0 ? (
-                  <p className="text-xs text-rose-500 font-semibold select-none">No courses available.</p>
-                ) : (
-                  <select
-                    value={enrollCourseId}
-                    onChange={(e) => setEnrollCourseId(e.target.value)}
-                    className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                  >
-                    <option value="">— Choose a course to enroll —</option>
-                    {allCourses.map((c) => (
-                      <option key={c.id} value={c.id} disabled={courses.some(ec => ec.id === c.id)}>
-                        {c.title} {courses.some(ec => ec.id === c.id) ? "(Enrolled)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setEnrollCourseId("");
-                  setIsEnrollModalOpen(false);
-                }}
-                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEnrollStudent}
-                disabled={!enrollCourseId}
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Enroll
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {projectToDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 text-rose-500 mb-4">
-              <AlertCircle className="h-6 w-6" />
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Delete Project?</h3>
-            </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
-              Are you sure you want to delete this project? This action cannot be undone and all data will be permanently lost.
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => setProjectToDelete(null)}
-                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleDeleteProject}
-                className="bg-rose-500 hover:bg-rose-600 text-white shadow-sm cursor-pointer"
-              >
-                Yes, Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONFIRMATION MODAL */}
-      {confirmModal.isOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50">
-              <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-rose-500" />
-                {confirmModal.title}
-              </h3>
-            </div>
-            <div className="p-6">
-              <p className="text-zinc-600 dark:text-zinc-400 text-sm">{confirmModal.message}</p>
-            </div>
-            <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex items-center justify-end gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={() => {
-                  if (confirmModal.onConfirm) confirmModal.onConfirm();
-                }}
-                className="bg-rose-600 hover:bg-rose-700 text-white shadow-sm font-medium"
-              >
-                Confirm
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Shared confirmation dialogs (extracted component) */}
+      <ConfirmModal
+        isOpen={!!projectToDelete}
+        title="Delete Project?"
+        message="Are you sure you want to delete this project? This action cannot be undone and all data will be permanently lost."
+        confirmLabel="Yes, Delete"
+        onConfirm={handleDeleteProject}
+        onCancel={() => setProjectToDelete(null)}
+      />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={() => {
+          if (confirmModal.onConfirm) confirmModal.onConfirm();
+        }}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
     </div>
   );
 }
